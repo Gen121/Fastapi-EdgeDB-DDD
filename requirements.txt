@@ -1,0 +1,9 @@
+# app
+edgedb
+fastapi
+
+# dev/tests
+pytest
+pytest-icdiff
+mypy
+requests
