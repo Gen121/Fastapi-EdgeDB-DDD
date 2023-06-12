@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from db_tables import metadata
-
+import edgedb
 
 @pytest.fixture
 def in_memory_db():
@@ -16,3 +16,9 @@ def in_memory_db():
 @pytest.fixture
 def session(in_memory_db):
     yield sessionmaker(bind=in_memory_db)()
+
+
+@pytest.fixture
+def client():
+    return edgedb.create_client()
+
