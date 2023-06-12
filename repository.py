@@ -29,6 +29,7 @@ class SqlRepository(AbstractRepository):
         # self.session.execute('SELECT ??
         ...
 
+
 class EdgeDBRepository(AbstractRepository):
     def __init__(self, client):
         self.client = client
@@ -42,20 +43,34 @@ class EdgeDBRepository(AbstractRepository):
                 sku := <str>$sku,
             }
         # """,
-        purchased_quantity=batch._purchased_quantity,
-        eta=batch.eta,
-        reference=batch.reference,
-        sku=batch.sku
-        )
+                          purchased_quantity=batch._purchased_quantity,
+                          eta=batch.eta,
+                          reference=batch.reference,
+                          sku=batch.sku
+                          )
 
     def get_batch_by_reference(self, reference) -> model.Batch:
         batch = self.client.query(
             "SELECT Batch {*} FILTER .reference = <str>$reference",
             reference=reference,
-            )
+        )
         return model.Batch(
             ref=batch.ref,
             sku=batch.sku,
             qty=batch.qty,
             eta=batch.eta,
         )
+
+
+class FakeRepository(AbstractRepository):
+    def __init__(self, batches):
+        self._batches = set(batches)
+
+    def add(self, batch):
+        self._batches.add(batch)
+
+    def get(self, reference):
+        return next(b for b in self._batches if b.reference == reference)
+
+    def list(self):
+        return list(self._batches)
