@@ -1,9 +1,9 @@
-CREATE MIGRATION m1xosj6dnt2ymt26tvu2yibjsqr663octlb5t4jiynlktqh3arqzdq
+CREATE MIGRATION m1rdd25gj4fgovsmvci523rnw75qrpgxa5qwvbimpyzaeevthsdzcq
     ONTO initial
 {
   CREATE FUTURE nonrecursive_access_policies;
   CREATE TYPE default::Batch {
-      CREATE PROPERTY eta: std::datetime;
+      CREATE PROPERTY eta: cal::local_date;
       CREATE REQUIRED PROPERTY purchased_quantity: std::int16;
       CREATE PROPERTY reference: std::str {
           CREATE CONSTRAINT std::max_len_value(255);

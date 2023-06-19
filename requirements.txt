@@ -7,3 +7,5 @@ pytest
 pytest-icdiff
 mypy
 requests
+isort
+flake8
