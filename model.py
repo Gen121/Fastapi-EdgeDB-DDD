@@ -29,8 +29,8 @@ class Batch:
         self.reference = ref
         self.sku = sku
         self.eta = eta
-        self._purchased_quantity = qty
-        self._allocations = set()  # type: Set[OrderLine]
+        self.purchased_quantity = qty
+        self.allocations = set()  # type: Set[OrderLine]
 
     def __repr__(self):
         return f"<Batch {self.reference}>"
@@ -52,19 +52,19 @@ class Batch:
 
     def allocate(self, line: OrderLine):
         if self.can_allocate(line):
-            self._allocations.add(line)
+            self.allocations.add(line)
 
     def deallocate(self, line: OrderLine):
-        if line in self._allocations:
-            self._allocations.remove(line)
+        if line in self.allocations:
+            self.allocations.remove(line)
 
     @property
     def allocated_quantity(self) -> int:
-        return sum(line.qty for line in self._allocations)
+        return sum(line.qty for line in self.allocations)
 
     @property
     def available_quantity(self) -> int:
-        return self._purchased_quantity - self.allocated_quantity
+        return self.purchased_quantity - self.allocated_quantity
 
     def can_allocate(self, line: OrderLine) -> bool:
         return self.sku == line.sku and self.available_quantity >= line.qty
