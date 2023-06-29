@@ -1,6 +1,6 @@
 # app
 edgedb
-fastapi
+fastapi[all]
 
 # dev/tests
 pytest
@@ -9,3 +9,4 @@ mypy
 requests
 isort
 flake8
+uvicorn[standard]
