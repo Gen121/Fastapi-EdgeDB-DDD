@@ -1,4 +1,5 @@
 import functools
+from uuid import UUID
 import edgedb
 import uvicorn
 from fastapi import Depends, FastAPI
@@ -7,10 +8,14 @@ from starlette.middleware.cors import CORSMiddleware
 import pyd_model as model
 import repository
 from __init__ import get_edgedb_client
+from dbschema import get_edgedb_dsn
 
 
 async def setup_edgedb(app):
-    client = app.state.edgedb = edgedb.create_async_client()
+    client = app.state.edgedb = edgedb.create_async_client(
+        get_edgedb_dsn(),
+        tls_security='insecure'
+    )
     await client.ensure_connected()
 
 
@@ -25,7 +30,7 @@ def make_app():
     app.on_event("startup")(functools.partial(setup_edgedb, app))
     app.on_event("shutdown")(functools.partial(shutdown_edgedb, app))
 
-    @app.get("/health_check", include_in_schema=False)
+    @app.get("/health_check")  # , include_in_schema=False
     async def health_check() -> dict[str, str]:
         return {"status": "Ok"}
 
@@ -45,10 +50,11 @@ app = make_app()
 
 @app.get('/batch')
 def get_batches(
+    uuid: UUID,
     client: edgedb.Client = Depends(get_edgedb_client)
 ) -> model.Batch:
     repo = repository.EdgeDBRepository(client)
-    return repo.get('batch1')
+    return repo.get(uuid=uuid)
 
 
 # @app.post('/allocate')
