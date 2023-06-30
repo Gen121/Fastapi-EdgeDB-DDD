@@ -1,0 +1,32 @@
+version: "3.8"
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - edgedb
+    env_file:
+      - ./.env
+    volumes:
+      - ./:/app
+    ports:
+      - "5005:8000"
+
+  edgedb:
+    image: edgedb/edgedb:latest
+    env_file:
+      - ./.env
+    ports:
+      - "56565:5656"
+    volumes:
+      - edgedb_data:/var/lib/edgedb/data
+      - ./dbschema:/dbschema
+    command: ["sh", "-c", "edgedb --host=localhost --port=5656 migrate"]
+
+
+volumes:
+  edgedb_data:
+
+# makemigrations
+# docker-compose exec edgedb edgedb --tls-security=insecure migrate
