@@ -5,6 +5,8 @@ import zoneinfo
 from uuid import UUID
 import json
 
+import pytest
+
 import repository
 from pyd_model import Batch, OrderLine
 
@@ -13,7 +15,7 @@ def random_num() -> int:
     return random.randint(10000, 99999)
 
 
-def test_repository_can_save_a_batch(client):
+async def test_repository_can_save_a_batch(async_client_db):
     bath_ref = f'can_save_a_batch_{random_num()}'
     tz = zoneinfo.ZoneInfo("America/Buenos_Aires")
     date = datetime.datetime.now(tz).date()
@@ -21,9 +23,9 @@ def test_repository_can_save_a_batch(client):
         reference=bath_ref, sku="RUSTY-SOAPDISH",
         purchased_quantity=100, eta=date,
     )
-    repo = repository.EdgeDBRepository(client)
-    repo.add(batch)
-    json_ = client.query_required_single_json(
+    repo = repository.EdgeDBRepository(async_client_db)
+    await repo.add(batch)
+    json_ = await async_client_db.query_required_single_json(
         """SELECT Batch {*}
             FILTER .reference = <str>$reference and .sku = <str>$sku
             LIMIT 1;
@@ -35,8 +37,8 @@ def test_repository_can_save_a_batch(client):
     assert batch_db == batch
 
 
-def insert_order_line(client, orderid) -> UUID:
-    client.query(
+async def insert_order_line(async_client_db, orderid) -> UUID:
+    await async_client_db.query(
         """INSERT OrderLine {
             orderid := <str>$orderid,
             sku := <str>$sku,
@@ -46,18 +48,18 @@ def insert_order_line(client, orderid) -> UUID:
         sku="GENERIC-SOFA",
         qty=12,
     )
-    order_id = client.query(
+    order_id = (await async_client_db.query(
         """SELECT OrderLine {id}
             FILTER .orderid = <str>$orderid and .sku=<str>$sku
         """,
         orderid=orderid,
         sku="GENERIC-SOFA",
-    )[0].id
+    ))[0].id
     return order_id
 
 
-def insert_batch(client, reference: str) -> UUID:
-    client.query(
+async def insert_batch(async_client_db, reference: str) -> UUID:
+    await async_client_db.query(
         """INSERT Batch {
             reference := <str>$reference,
             sku := <str>$sku,
@@ -67,17 +69,17 @@ def insert_batch(client, reference: str) -> UUID:
         sku="GENERIC-SOFA",
         purchased_quantity=100,
     )
-    batch_id = client.query(
+    batch_id = (await async_client_db.query(
         """SELECT Batch {id}
             FILTER .reference = <str>$reference and .sku=<str>$sku""",
         reference=reference,
         sku="GENERIC-SOFA"
-    )[0].id
+    ))[0].id
     return batch_id
 
 
-def add_allocateion_to_batch_by_ids(client, orderline_id: UUID, batch_id: UUID) -> None:
-    client.query(
+async def add_allocateion_to_batch_by_ids(client_db, orderline_id: UUID, batch_id: UUID) -> None:
+    await client_db.query(
         """
         UPDATE OrderLine
             FILTER .id = <uuid>$orderline_id
@@ -91,16 +93,16 @@ def add_allocateion_to_batch_by_ids(client, orderline_id: UUID, batch_id: UUID) 
     )
 
 
-def test_repository_can_retrieve_a_batch_with_allocations(client):
+async def test_repository_can_retrieve_a_batch_with_allocations(async_client_db):
     orderid = f'inserted_order_line_{random_num()}'
-    orderline_id = insert_order_line(client, orderid)
-    batch1_id = insert_batch(
-        client, f"repository_can_retrieve_a_batch_with_{orderid}")
-    insert_batch(client, f"inserted_batch_{random_num()}")
-    add_allocateion_to_batch_by_ids(client, orderline_id, batch1_id)
+    orderline_id = await insert_order_line(async_client_db, orderid)
+    batch1_id = await insert_batch(
+        async_client_db, f"repository_can_retrieve_a_batch_with_{orderid}")
+    await insert_batch(async_client_db, f"inserted_batch_{random_num()}")
+    await add_allocateion_to_batch_by_ids(async_client_db, orderline_id, batch1_id)
 
-    repo = repository.EdgeDBRepository(client)
-    retrieved: Batch = repo.get(
+    repo = repository.EdgeDBRepository(async_client_db)
+    retrieved: Batch = await repo.get(
         reference=f"repository_can_retrieve_a_batch_with_{orderid}")
 
     expected = Batch(
@@ -118,8 +120,8 @@ def test_repository_can_retrieve_a_batch_with_allocations(client):
     }
 
 
-def get_allocations(client, reference):
-    json_: str = client.query_json(
+async def get_allocations(async_client_db, reference):
+    json_ = await async_client_db.query_json(
         """
         SELECT OrderLine {orderid}
             FILTER .allocated_in .reference = <str>$reference
@@ -129,7 +131,7 @@ def get_allocations(client, reference):
     return {i['orderid'] for i in json.loads(json_)}
 
 
-def test_updating_a_batch(client):
+async def test_updating_a_batch(async_client_db):
     order1 = OrderLine(orderid=f"order_{random_num()}", sku="WEATHERED-BENCH", qty=10)
     order2 = OrderLine(orderid=f"order_{random_num()}", sku="WEATHERED-BENCH", qty=20)
     batch_reference = f"batch_{random_num()}"
@@ -137,10 +139,19 @@ def test_updating_a_batch(client):
                   purchased_quantity=100, eta=None)
     batch.allocate(order1)
 
-    repo = repository.EdgeDBRepository(client)
-    repo.add(batch)
+    repo = repository.EdgeDBRepository(async_client_db)
+    await repo.add(batch)
 
     batch.allocate(order2)
-    repo.add(batch)
+    await repo.add(batch)
 
-    assert get_allocations(client, batch_reference) == {order1.orderid, order2.orderid}
+    assert await get_allocations(async_client_db, batch_reference) == {order1.orderid, order2.orderid}
+
+
+async def test_error_for_get_without_parametrs(async_client_db):
+    repo = repository.EdgeDBRepository(async_client_db)
+    try:
+        await repo.get()
+    except Exception as e:
+        with pytest.raises(Exception, match="Необходим UUID или reference"):
+            raise e

@@ -6,24 +6,27 @@ import pyd_model as model
 
 class AbstractRepository(abc.ABC):
     @abc.abstractmethod
-    def add(self, batch: model.Batch):
+    async def add(self, batch: model.Batch):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get(self, reference) -> model.Batch:
+    async def get(self, reference) -> model.Batch:
+        raise NotImplementedError
+
+    async def list(self) -> list[model.Batch]:
         raise NotImplementedError
 
 
 class EdgeDBRepository(AbstractRepository):
-    def __init__(self, client):
-        self.client: edgedb.Client = client
+    def __init__(self, client_db):
+        self.client: edgedb.AsyncIOClient = client_db
 
-    def get(self, uuid: UUID | None = None, reference: str | None = None) -> model.Batch:
+    async def get(self, uuid: UUID | None = None, reference: str | None = None) -> model.Batch:
         """Return Batch by UUID or Reference."""
         if not any((uuid, reference)):
             raise Exception('Необходим UUID или reference')
 
-        obj_ = self.client.query_required_single(
+        obj_ = await self.client.query_required_single(
             """select Batch {**}
                 filter .id ?= <optional uuid>$uuid
                 or .reference ?= <optional str>$reference
@@ -32,12 +35,12 @@ class EdgeDBRepository(AbstractRepository):
             uuid=uuid, reference=reference)
         return model.Batch.from_orm(obj_)
 
-    def add(self, batch: model.Batch) -> None:
-        return self.add_batch(batch)
+    async def add(self, batch: model.Batch) -> None:
+        return await self.add_batch(batch)
 
-    def add_batch(self, batch: model.Batch) -> None:
+    async def add_batch(self, batch: model.Batch) -> None:
         batch.allocations = list(batch.allocations)  # noqa
-        self.client.query(
+        await self.client.query(
             """with
             obj := <json>$data,
             list_orders := <array<json>>obj['allocations'] ?? [<json>{}],
@@ -80,30 +83,22 @@ class EdgeDBRepository(AbstractRepository):
         )
         batch.allocations = set(batch.allocations)
 
-    def get_batch_by_reference(self, reference: str) -> model.Batch:
-        batch = self.client.query_required_single_json(
-            "SELECT Batch {**} FILTER .reference = <str>$reference LIMIT 1",
-            reference=reference,
+    async def list(self) -> list[model.Batch]:
+        objects = await self.client.query(
+            """SELECT Batch {**}"""
         )
-        return model.Batch.parse_raw(batch)
-
-    def get_batch_by_id(self, id: UUID) -> model.Batch:
-        batch = self.client.query_required_single_json(
-            "SELECT Batch {**} FILTER .id = <uuid>$id LIMIT 1",
-            id=id,
-        )
-        return model.Batch.parse_raw(batch)
+        return [model.Batch.from_orm(obj) for obj in objects]
 
 
 class FakeRepository(AbstractRepository):
     def __init__(self, batches):
         self._batches = set(batches)
 
-    def add(self, batch):
+    async def add(self, batch):
         self._batches.add(batch)
 
-    def get(self, reference):
+    async def get(self, reference):
         return next(b for b in self._batches if b.reference == reference)
 
-    def list(self):
+    async def list(self):
         return list(self._batches)

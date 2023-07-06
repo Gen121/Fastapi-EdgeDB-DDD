@@ -1,19 +1,22 @@
 import functools
+from http import HTTPStatus
 from uuid import UUID
+
 import edgedb
 import uvicorn
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from starlette.middleware.cors import CORSMiddleware
 
 import pyd_model as model
 import repository
+import services
 from __init__ import get_edgedb_client
 from dbschema import get_edgedb_dsn
 
 
-async def setup_edgedb(app):
+async def setup_edgedb(app, test_db: bool = False):
     client = app.state.edgedb = edgedb.create_async_client(
-        get_edgedb_dsn(),
+        get_edgedb_dsn(test=test_db),
         tls_security='insecure'
     )
     await client.ensure_connected()
@@ -24,15 +27,11 @@ async def shutdown_edgedb(app):
     await client.aclose()
 
 
-def make_app():
+def make_app(test_db: bool = False):
     app = FastAPI()
 
-    app.on_event("startup")(functools.partial(setup_edgedb, app))
+    app.on_event("startup")(functools.partial(setup_edgedb, app, test_db))
     app.on_event("shutdown")(functools.partial(shutdown_edgedb, app))
-
-    @app.get("/health_check")  # , include_in_schema=False
-    async def health_check() -> dict[str, str]:
-        return {"status": "Ok"}
 
     app.add_middleware(
         CORSMiddleware,
@@ -42,6 +41,22 @@ def make_app():
         allow_headers=["*"],
     )
 
+    @app.get("/health_check")
+    async def health_check() -> dict[str, str]:
+        return {"status": "Ok"}
+
+    @app.post('/allocate', status_code=HTTPStatus.CREATED)
+    async def allocate_endpoint(
+        line: model.OrderLine,
+        client_db: edgedb.AsyncIOClient = Depends(get_edgedb_client)
+    ) -> dict[str, str]:
+        repo = repository.EdgeDBRepository(client_db)
+        try:
+            batchref = await services.allocate(line, repo, client_db)
+        except (model.OutOfStock, services.InvalidSku) as e:
+            raise HTTPException(HTTPStatus.BAD_REQUEST, detail=e.args[0])
+        return {"batchref": batchref}
+
     return app
 
 
@@ -49,26 +64,20 @@ app = make_app()
 
 
 @app.get('/batch')
-def get_batches(
+async def get_batches(
     uuid: UUID,
-    client: edgedb.Client = Depends(get_edgedb_client)
-) -> model.Batch:
-    repo = repository.EdgeDBRepository(client)
-    return repo.get(uuid=uuid)
+    client_db: edgedb.Client = Depends(get_edgedb_client)
+) -> model.Batch | list[model.Batch]:
+    repo = repository.EdgeDBRepository(client_db)
+    return await repo.get(uuid=uuid)
 
 
-# @app.post('/allocate')
-# def allocate_endpoint(
-#     line: model.OrderLine,
-#     client: edgedb.AsyncIOClient = Depends(get_edgedb_client)
-# ) -> dict[str, str]:
-#     repo = repository.EdgeDBRepository(client)
-#     try:
-#         batchref = services.allocate(line, repo, client)
-#     except (model.OutOfStock, services.InvalidSku) as e:
-#         return {"message": str(e)}, 400
-
-#     return {"batchref": batchref}, 201
+@app.get('/batches')
+async def get_all_batches(
+    client_db: edgedb.Client = Depends(get_edgedb_client)
+) -> list[model.Batch]:
+    repo = repository.EdgeDBRepository(client_db)
+    return await repo.list()
 
 
 if __name__ == '__main__':
