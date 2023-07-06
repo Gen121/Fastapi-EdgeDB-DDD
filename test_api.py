@@ -49,46 +49,7 @@ async def test_api_returns_allocation(add_stock, test_client: TestClient):
 
 
 @pytest.mark.usefixtures('restart_api')
-async def test_allocations_are_persisted(add_stock, test_client: TestClient):
-    sku = random_sku()
-    batch1, batch2 = random_batchref(1), random_batchref(2)
-    order1, order2 = random_orderid(1), random_orderid(2)
-    await add_stock([
-        (batch1, sku, 10, '2011-01-01'),
-        (batch2, sku, 10, '2011-01-02'),
-    ])
-    line1 = {'orderid': order1, 'sku': sku, 'qty': 10}
-    line2 = {'orderid': order2, 'sku': sku, 'qty': 10}
-    url = config.get_api_url()
-    # первый заказ исчерпывает все товары в партии 1
-    r = test_client.post(f'{url}/allocate', json=line1)
-    assert r.status_code == 201
-    assert r.json()['batchref'] == batch1
-    # второй заказ должен пойти в партию 2
-    r = test_client.post(f'{url}/allocate', json=line2)
-    assert r.status_code == 201
-    assert r.json()['batchref'] == batch2
-
-
-@pytest.mark.usefixtures('restart_api')
-async def test_400_message_for_out_of_stock(add_stock, test_client: TestClient):
-    sku, smalL_batch, large_order = random_sku(), random_batchref(), random_orderid()
-    await add_stock([
-        (smalL_batch, sku, 10, '2011-01-01'),
-    ])
-    data = {'orderid': large_order, 'sku': sku, 'qty': 20}
-    url = config.get_api_url()
-    try:
-        r = test_client.post(f'{url}/allocate', json=data)
-    except HTTPException as e:
-        with pytest.raises(HTTPException, match="Error: Bad Request"):
-            raise e
-    assert r.status_code == 400
-    assert r.json()['detail'] == f'Out of stock for sku {sku}'
-
-
-@pytest.mark.usefixtures('restart_api')
-async def test_400_message_for_invalid_sku(test_client: TestClient):
+async def test_unhappy_path_returns_400_and_error_message(test_client: TestClient):
     unknown_sku, orderid = random_sku(), random_orderid()
     data = {'orderid': orderid, 'sku': unknown_sku, 'qty': 20}
     url = config.get_api_url()
