@@ -1,0 +1,7 @@
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+asyncio_mode="auto"
+addopts = "--cov-config=.coveragerc --cov=. --cov-report xml:cov.xml"
+
+[tool.flake8]
+max-line-length = 120

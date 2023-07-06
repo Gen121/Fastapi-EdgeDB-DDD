@@ -1,0 +1,42 @@
+[run]
+source = .
+
+omit =
+   *conftest.py*
+   *venv/*
+   *venv/bin/*
+   *venv/include/*
+   *venv/lib/*
+   */settings.py
+   */local_settings.py
+   */tests/*
+   *apps.py
+   *migrations/*
+   *asgi.py
+   *wsgi.py
+   *dbschema/*
+   *dbschema/migrations/*
+   *test_*
+   *__init__*
+   */__pycache__/*
+   */site-packages/*
+   */distutils/*
+
+[report]
+exclude_also =
+    from 
+    import 
+    ^\s{4,}def\s+__repr__\(self\):
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    @(abc\.)?abstractmethod
+
+ignore_errors = True
+
+
+#fail_under = 100
+show_missing = True
+#skip_covered = True
+
+[xml]
+output = cov.xml
