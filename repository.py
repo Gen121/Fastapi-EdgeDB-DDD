@@ -18,8 +18,8 @@ class AbstractRepository(abc.ABC):
 
 
 class EdgeDBRepository(AbstractRepository):
-    def __init__(self, client_db):
-        self.client: edgedb.AsyncIOClient = client_db
+    def __init__(self, async_client_db):
+        self.client: edgedb.AsyncIOClient = async_client_db
 
     async def get(self, uuid: UUID | None = None, reference: str | None = None) -> model.Batch:
         """Return Batch by UUID or Reference."""

@@ -48,11 +48,11 @@ def make_app(test_db: bool = False):
     @app.post('/allocate', status_code=HTTPStatus.CREATED)
     async def allocate_endpoint(
         line: model.OrderLine,
-        client_db: edgedb.AsyncIOClient = Depends(get_edgedb_client)
+        async_client_db: edgedb.AsyncIOClient = Depends(get_edgedb_client)
     ) -> dict[str, str]:
-        repo = repository.EdgeDBRepository(client_db)
+        repo = repository.EdgeDBRepository(async_client_db)
         try:
-            batchref = await services.allocate(line, repo, client_db)
+            batchref = await services.allocate(line, repo, async_client_db)
         except (model.OutOfStock, services.InvalidSku) as e:
             raise HTTPException(HTTPStatus.BAD_REQUEST, detail=e.args[0])
         return {"batchref": batchref}
@@ -65,18 +65,19 @@ app = make_app()
 
 @app.get('/batch')
 async def get_batches(
-    uuid: UUID,
-    client_db: edgedb.Client = Depends(get_edgedb_client)
+    uuid: UUID | None = None,
+    reference: str | None = None,
+    async_client_db: edgedb.Client = Depends(get_edgedb_client)
 ) -> model.Batch | list[model.Batch]:
-    repo = repository.EdgeDBRepository(client_db)
-    return await repo.get(uuid=uuid)
+    repo = repository.EdgeDBRepository(async_client_db)
+    return await repo.get(uuid=uuid, reference=reference)
 
 
 @app.get('/batches')
 async def get_all_batches(
-    client_db: edgedb.Client = Depends(get_edgedb_client)
+    async_client_db: edgedb.Client = Depends(get_edgedb_client)
 ) -> list[model.Batch]:
-    repo = repository.EdgeDBRepository(client_db)
+    repo = repository.EdgeDBRepository(async_client_db)
     return await repo.list()
 
 

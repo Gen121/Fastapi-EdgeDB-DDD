@@ -78,8 +78,8 @@ async def insert_batch(async_client_db, reference: str) -> UUID:
     return batch_id
 
 
-async def add_allocateion_to_batch_by_ids(client_db, orderline_id: UUID, batch_id: UUID) -> None:
-    await client_db.query(
+async def add_allocateion_to_batch_by_ids(async_client_db, orderline_id: UUID, batch_id: UUID) -> None:
+    await async_client_db.query(
         """
         UPDATE OrderLine
             FILTER .id = <uuid>$orderline_id
