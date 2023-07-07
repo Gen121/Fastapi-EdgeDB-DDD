@@ -1,6 +1,6 @@
-from pyd_model import OrderLine
-from repository import AbstractRepository
-import model
+import domain.model as model
+from adapters.pyd_model import OrderLine
+from repositories.repository import AbstractRepository
 
 
 class InvalidSku(Exception):

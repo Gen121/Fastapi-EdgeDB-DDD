@@ -1,16 +1,16 @@
 # pytest: disable=redefined-outer-name
-from http import HTTPStatus
 import time
 from datetime import date
+from http import HTTPStatus
 from pathlib import Path
 
 import edgedb
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
+from app.main import make_app
 
 from dbschema import get_api_url, get_edgedb_dsn
-from main import make_app
 
 
 async def wait_for_edgedb_to_come_up(async_client_db: edgedb.AsyncIOClient):

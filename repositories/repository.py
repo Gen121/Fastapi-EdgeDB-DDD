@@ -1,7 +1,9 @@
 import abc
 from uuid import UUID
+
 import edgedb
-import pyd_model as model
+
+import adapters.pyd_model as model
 
 
 class AbstractRepository(abc.ABC):

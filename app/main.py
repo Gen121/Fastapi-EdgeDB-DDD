@@ -7,9 +7,9 @@ import uvicorn
 from fastapi import Depends, FastAPI, HTTPException
 from starlette.middleware.cors import CORSMiddleware
 
-import pyd_model as model
-import repository
-import services
+import adapters.pyd_model as model
+import repositories.repository as repository
+import services.services as services
 from __init__ import get_edgedb_client
 from dbschema import get_edgedb_dsn
 
