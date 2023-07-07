@@ -11,7 +11,11 @@ async def is_valid_sku(sku, batches):
     return sku in {b.sku for b in batches}
 
 
-async def allocate(line: OrderLine, repo: AbstractRepository, session) -> str:
+async def allocate(
+    orderid: str, sku: str, qty: int,
+    repo: AbstractRepository, session
+) -> str:
+    line = OrderLine(orderid=orderid, sku=sku, qty=qty)
     batches = await repo.list()
     if not await is_valid_sku(line.sku, batches):
         raise InvalidSku(f'Invalid sku {line.sku}')

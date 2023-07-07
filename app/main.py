@@ -52,7 +52,8 @@ def make_app(test_db: bool = False):
     ) -> dict[str, str]:
         repo = repository.EdgeDBRepository(async_client_db)
         try:
-            batchref = await services.allocate(line, repo, async_client_db)
+            batchref = await services.allocate(
+                **line.dict(include={"sku", "qty", "orderid"}), repo=repo, session=async_client_db)
         except (model.OutOfStock, services.InvalidSku) as e:
             raise HTTPException(HTTPStatus.BAD_REQUEST, detail=e.args[0])
         return {"batchref": batchref}
