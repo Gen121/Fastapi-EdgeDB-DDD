@@ -1,9 +1,8 @@
 import uuid
 from http import HTTPStatus
-from fastapi import HTTPException
 
 import pytest  # noqa
-from fastapi.testclient import TestClient
+from httpx import AsyncClient
 
 from dbschema import config
 
@@ -24,13 +23,13 @@ def random_orderid(name: str | int = "") -> str:
     return f"order-{name}-{random_suffix()}"
 
 
-async def test_health_check(test_client):
-    response = test_client.get("/health_check")
+async def test_health_check(async_test_client):
+    response = await async_test_client.get("/health_check")
     assert response.status_code == HTTPStatus.OK
 
 
 @pytest.mark.usefixtures('restart_api')
-async def test_api_returns_allocation(add_stock, test_client: TestClient):
+async def test_api_returns_allocation(add_stock, async_test_client: AsyncClient):
     sku, othersku = random_sku(), random_sku('other')
     earlybatch = random_batchref(1)
     laterbatch = random_batchref(2)
@@ -42,18 +41,18 @@ async def test_api_returns_allocation(add_stock, test_client: TestClient):
     ])
     data = {'orderid': random_orderid(), 'sku': sku, 'qty': 3}
     url = config.get_api_url()
-    r = test_client.post(f'{url}/allocate', json=data)
+    r = await async_test_client.post(f'{url}/allocate', json=data)
     assert r.status_code == 201
     assert True
     assert r.json()['batchref'] == earlybatch
 
 
 @pytest.mark.usefixtures('restart_api')
-async def test_unhappy_path_returns_400_and_error_message(test_client: TestClient):
+async def test_unhappy_path_returns_400_and_error_message(async_test_client: AsyncClient):
     unknown_sku, orderid = random_sku(), random_orderid()
     data = {'orderid': orderid, 'sku': unknown_sku, 'qty': 20}
     url = config.get_api_url()
-    r = test_client.post(f'{url}/allocate', json=data)
+    r = await async_test_client.post(f'{url}/allocate', json=data)
     assert r.status_code == 400
     assert r.json()['detail'] == f'Invalid sku {unknown_sku}'
 

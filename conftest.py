@@ -1,37 +1,48 @@
 # pytest: disable=redefined-outer-name
-from datetime import date
+from http import HTTPStatus
 import time
+from datetime import date
 from pathlib import Path
 
 import edgedb
 import pytest
-from httpx import AsyncClient
 from fastapi.testclient import TestClient
+from httpx import AsyncClient
 
-from dbschema import get_edgedb_dsn, get_api_url
+from dbschema import get_api_url, get_edgedb_dsn
 from main import make_app
 
 
+async def wait_for_edgedb_to_come_up(async_client_db: edgedb.AsyncIOClient):
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        try:
+            await async_client_db.ensure_connected()
+        except Exception:
+            time.sleep(0.5)
+        else:
+            return
+    pytest.exit("Edgedb never came up", returncode=1)
+
+
 @pytest.fixture
-def client_db() -> edgedb.Client:
-    return edgedb.create_client(
+async def async_client_db() -> edgedb.AsyncIOClient:
+    async_client_db = edgedb.create_async_client(
         get_edgedb_dsn(test=True),
         tls_security='insecure'
     )
+    await wait_for_edgedb_to_come_up(async_client_db)
+    return async_client_db
 
 
 @pytest.fixture
-def async_client_db() -> edgedb.AsyncIOClient:
-    return edgedb.create_async_client(
-        get_edgedb_dsn(test=True),
-        tls_security='insecure'
-    )
-
-
-@pytest.fixture
-async def async_client():
-    async with AsyncClient(app=make_app(), base_url=get_api_url()) as client:
+async def async_test_client(async_client_db: edgedb.AsyncIOClient):
+    app = make_app()
+    app.state.edgedb = async_client_db
+    async with AsyncClient(app=app, base_url=get_api_url()) as client:
         yield client
+    client, app.state.edgedb = app.state.edgedb, None
+    await client.aclose()
 
 
 @pytest.fixture
@@ -67,10 +78,24 @@ async def tx_shutdown_edgedb(app):
     await client.aclose()
 
 
+async def wait_for_webapp_to_come_up(async_test_client: AsyncClient):
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        try:
+            response = await async_test_client.get("/health_check")
+            assert response.status_code == HTTPStatus.OK
+        except Exception:
+            time.sleep(0.5)
+        else:
+            return
+    pytest.exit("API never came up", returncode=1)
+
+
 @pytest.fixture
-def restart_api():
+async def restart_api(async_test_client):
     (Path(__file__).parent / "main.py").touch()
-    time.sleep(0.3)
+    time.sleep(0.5)
+    await wait_for_webapp_to_come_up(async_test_client)
 
 
 @pytest.fixture
