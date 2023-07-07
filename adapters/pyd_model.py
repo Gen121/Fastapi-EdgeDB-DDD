@@ -29,7 +29,7 @@ class OrderLine(BaseModel, model.OrderLine):
         ))
 
     class Config:
-        orm_mode = True
+        from_attributes = True
         frozen = True
 
 
@@ -51,16 +51,7 @@ class Batch(BaseModel, model.Batch):
         return other.reference == self.reference
 
     class Config:
-        orm_mode = True
-        json_encoders = {
-            set: list
-        }
-
-    @validator('allocations', pre=True)
-    def convert_to_set(cls, value):
-        if isinstance(value, list):
-            return set((OrderLine.from_orm(obj) for obj in value))
-        return value
+        from_attributes = True
 
 
-OrderLineWithAllocatedIn.update_forward_refs()
+OrderLineWithAllocatedIn.model_rebuild()
