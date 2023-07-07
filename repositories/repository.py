@@ -41,7 +41,6 @@ class EdgeDBRepository(AbstractRepository):
         return await self.add_batch(batch)
 
     async def add_batch(self, batch: model.Batch) -> None:
-        batch.allocations = list(batch.allocations)  # noqa
         await self.client.query(
             """with
             obj := <json>$data,
@@ -83,7 +82,6 @@ class EdgeDBRepository(AbstractRepository):
             """,
             data=batch.json()
         )
-        batch.allocations = set(batch.allocations)
 
     async def list(self) -> list[model.Batch]:
         objects = await self.client.query(
