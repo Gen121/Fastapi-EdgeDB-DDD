@@ -1,13 +1,14 @@
 # app
 edgedb
 fastapi[all]
+uvicorn[standard]
 
 # dev/tests
 pytest
 pytest-asyncio
+pytest-cov
 pytest-icdiff
 mypy
 requests
 isort
 flake8
-uvicorn[standard]
