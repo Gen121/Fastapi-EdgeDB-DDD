@@ -35,19 +35,19 @@ async def test_add_batch():
     assert repo.get(reference="b1") is not None
 
 
-async def test_returns_allocation():
-    repo = FakeRepository.for_batch("b1", "COMPLICATED-LAMP", 100, eta=None)
-
+async def test_allocate_returns_allocation():
+    repo, session = FakeRepository([]), FakeSession()
+    await services.add_batch("batch1", "COMPLICATED-LAMP", 100, None, repo, session)
     result = await services.allocate(
         orderid="o1", sku="COMPLICATED-LAMP", qty=10,
         repo=repo, session=FakeSession()
     )
-    assert result == "b1"
+    assert result == "batch1"
 
 
-async def test_error_for_invalid_sku():
-    repo = FakeRepository.for_batch("b1", "AREALSKU", 100, eta=None)
-
+async def test_allocate_errors_for_invalid_sku():
+    repo, session = FakeRepository([]), FakeSession()
+    await services.add_batch("b1", "AREALSKU", 100, None, repo, session)
     try:
         await services.allocate(
             orderid="o1", sku="NONEXISTENTSKU", qty=10,
