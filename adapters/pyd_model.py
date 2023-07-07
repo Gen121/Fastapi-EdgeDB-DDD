@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from uuid import UUID
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 
 import domain.model as model
 from domain.model import OutOfStock  # noqa
@@ -44,6 +44,9 @@ class Batch(BaseModel, model.Batch):
     eta: date | None
     purchased_quantity: int
     allocations: set[OrderLine | None] = Field(default_factory=set)
+
+    def __hash__(self):
+        return hash(self.reference)
 
     def __eq__(self, other):
         if not isinstance(other, Batch):

@@ -1,5 +1,7 @@
+from datetime import date
+
 import domain.model as model
-from adapters.pyd_model import OrderLine
+from adapters.pyd_model import Batch, OrderLine
 from repositories.repository import AbstractRepository
 
 
@@ -9,6 +11,13 @@ class InvalidSku(Exception):
 
 async def is_valid_sku(sku, batches):
     return sku in {b.sku for b in batches}
+
+
+async def add_batch(
+    ref: str, sku: str, qty: int, eta: date | None,
+    repo: AbstractRepository, session,
+) -> None:
+    await repo.add(Batch(reference=ref, sku=sku, purchased_quantity=qty, eta=eta))
 
 
 async def allocate(

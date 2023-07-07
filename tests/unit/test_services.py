@@ -29,6 +29,12 @@ class FakeSession:
         self.committed = True
 
 
+async def test_add_batch():
+    repo, session = FakeRepository([]), FakeSession()
+    await services.add_batch("b1", "CRUNCHY-ARMCHAIR", 100, None, repo, session)
+    assert repo.get(reference="b1") is not None
+
+
 async def test_returns_allocation():
     repo = FakeRepository.for_batch("b1", "COMPLICATED-LAMP", 100, eta=None)
 
