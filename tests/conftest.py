@@ -93,7 +93,7 @@ async def wait_for_webapp_to_come_up(async_test_client: AsyncClient):
 
 @pytest.fixture
 async def restart_api(async_test_client):
-    (Path(__file__).parent / "main.py").touch()
+    (Path(__file__).parent.parent / "app" / "main.py").touch()
     time.sleep(0.5)
     await wait_for_webapp_to_come_up(async_test_client)
 
