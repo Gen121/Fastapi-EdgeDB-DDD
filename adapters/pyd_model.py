@@ -10,7 +10,7 @@ from domain.model import OutOfStock  # noqa
 
 
 class OrderLine(BaseModel, model.OrderLine):
-    id: UUID | None = Field(default=None)
+    id: UUID | None = Field(default=None, exclude=True)
     sku: str
     qty: int
     orderid: str
@@ -38,7 +38,7 @@ class OrderLineWithAllocatedIn(OrderLine):
 
 
 class Batch(BaseModel, model.Batch):
-    id: UUID | None = Field(default=None)
+    id: UUID | None = Field(default=None, exclude=True,)
     reference: str
     sku: str
     eta: date | None

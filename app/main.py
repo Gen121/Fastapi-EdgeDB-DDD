@@ -7,10 +7,10 @@ import uvicorn
 from fastapi import Depends, FastAPI, HTTPException
 from starlette.middleware.cors import CORSMiddleware
 
-import adapters.pyd_model as model
 import repositories.repository as repository
 import services.services as services
 from __init__ import get_edgedb_client
+from adapters import pyd_model as model
 from dbschema import get_edgedb_dsn
 
 
@@ -53,7 +53,7 @@ def make_app(test_db: bool = False):
         repo = repository.EdgeDBRepository(async_client_db)
         try:
             batchref = await services.allocate(
-                **line.dict(include={"sku", "qty", "orderid"}), repo=repo, session=async_client_db)
+                **line.model_dump(), repo=repo, session=async_client_db)
         except (model.OutOfStock, services.InvalidSku) as e:
             raise HTTPException(HTTPStatus.BAD_REQUEST, detail=e.args[0])
         return {"batchref": batchref}
