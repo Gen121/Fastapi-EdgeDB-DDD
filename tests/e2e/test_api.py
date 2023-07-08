@@ -28,17 +28,28 @@ async def test_health_check(async_test_client):
     assert response.status_code == HTTPStatus.OK
 
 
+async def post_to_add_batch(async_test_client, ref, sku, qty, eta):
+    url = config.get_api_url()
+    r = await async_test_client.post(
+        f"{url}/add_batch", json={
+            "reference": ref,
+            "sku": sku,
+            "purchased_quantity": qty,
+            "eta": eta
+            }
+    )
+    assert r.status_code == 201
+
+
 @pytest.mark.usefixtures('restart_api')
 async def test_api_returns_allocation(add_stock, async_test_client: AsyncClient):
     sku, othersku = random_sku(), random_sku('other')
     earlybatch = random_batchref(1)
     laterbatch = random_batchref(2)
     otherbatch = random_batchref(3)
-    await add_stock([
-        (laterbatch, sku, 100, '2011-01-02'),
-        (earlybatch, sku, 100, '2011-01-01'),
-        (otherbatch, othersku, 100, '2011-12-12'),
-    ])
+    await post_to_add_batch(async_test_client, laterbatch, sku, 100, "2011-01-02")
+    await post_to_add_batch(async_test_client, earlybatch, sku, 100, "2011-01-01")
+    await post_to_add_batch(async_test_client, otherbatch, othersku, 100, None)
     data = {'orderid': random_orderid(), 'sku': sku, 'qty': 3}
     url = config.get_api_url()
     r = await async_test_client.post(f'{url}/allocate', json=data)

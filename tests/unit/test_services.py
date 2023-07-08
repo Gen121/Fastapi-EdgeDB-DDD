@@ -31,13 +31,13 @@ class FakeSession:
 
 async def test_add_batch():
     repo, session = FakeRepository([]), FakeSession()
-    await services.add_batch("b1", "CRUNCHY-ARMCHAIR", 100, None, repo, session)
+    await services.add_batch("b1", "CRUNCHY-ARMCHAIR", 100, None, set(), repo, session=session)
     assert repo.get(reference="b1") is not None
 
 
 async def test_allocate_returns_allocation():
     repo, session = FakeRepository([]), FakeSession()
-    await services.add_batch("batch1", "COMPLICATED-LAMP", 100, None, repo, session)
+    await services.add_batch("batch1", "COMPLICATED-LAMP", 100, None, set(), repo, session)
     result = await services.allocate(
         orderid="o1", sku="COMPLICATED-LAMP", qty=10,
         repo=repo, session=FakeSession()
@@ -47,7 +47,7 @@ async def test_allocate_returns_allocation():
 
 async def test_allocate_errors_for_invalid_sku():
     repo, session = FakeRepository([]), FakeSession()
-    await services.add_batch("b1", "AREALSKU", 100, None, repo, session)
+    await services.add_batch("b1", "AREALSKU", 100, None, set(), repo, session)
     try:
         await services.allocate(
             orderid="o1", sku="NONEXISTENTSKU", qty=10,

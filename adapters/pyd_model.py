@@ -43,7 +43,7 @@ class Batch(BaseModel, model.Batch):
     sku: str
     eta: date | None
     purchased_quantity: int
-    allocations: set[OrderLine | None] = Field(default_factory=set)
+    allocations: set[OrderLine | None] | None = Field(default_factory=set)
 
     def __hash__(self):
         return hash(self.reference)

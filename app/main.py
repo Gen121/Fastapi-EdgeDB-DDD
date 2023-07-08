@@ -3,7 +3,6 @@ from http import HTTPStatus
 from uuid import UUID
 
 import edgedb
-import uvicorn
 from fastapi import Depends, FastAPI, HTTPException
 from starlette.middleware.cors import CORSMiddleware
 
@@ -56,8 +55,31 @@ def make_app(test_db: bool = False):
                 **line.model_dump(), repo=repo, session=async_client_db)
         except (model.OutOfStock, services.InvalidSku) as e:
             raise HTTPException(HTTPStatus.BAD_REQUEST, detail=e.args[0])
+        except Exception as e:
+            raise HTTPException(
+                HTTPStatus.BAD_REQUEST,
+                detail=f"Unhandled exception during query execution: {e.args[0]}"
+            )
         return {"batchref": batchref}
 
+    @app.post("/add_batch", status_code=HTTPStatus.CREATED)
+    async def add_batch(
+        batch: model.Batch,
+        async_client_db: edgedb.AsyncIOClient = Depends(get_edgedb_client)
+    ):
+        repo = repository.EdgeDBRepository(async_client_db)
+        try:
+            await services.add_batch(
+                **batch.model_dump(), repo=repo, session=async_client_db
+            )
+        except services.OutOfStockInBatch as e:
+            raise HTTPException(HTTPStatus.BAD_REQUEST, detail=e.args[0])
+        except Exception as e:
+            raise HTTPException(
+                HTTPStatus.BAD_REQUEST,
+                detail=f"Unhandled exception during query execution: {e.args[0]}"
+            )
+        return {"status": "Ok"}
     return app
 
 
@@ -80,7 +102,3 @@ async def get_all_batches(
 ) -> list[model.Batch]:
     repo = repository.EdgeDBRepository(async_client_db)
     return await repo.list()
-
-
-if __name__ == '__main__':
-    uvicorn.run('main:app', reload=True)
