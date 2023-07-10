@@ -8,21 +8,23 @@ import edgedb
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
-from app.main import make_app
 
-from dbschema import get_api_url, get_edgedb_dsn
+from allocation.app.main import make_app
+from allocation.dbschema import get_api_url, get_edgedb_dsn
 
 
 async def wait_for_edgedb_to_come_up(async_client_db: edgedb.AsyncIOClient):
     deadline = time.time() + 10
+    message = ''
     while time.time() < deadline:
         try:
             await async_client_db.ensure_connected()
-        except Exception:
+        except Exception as e:
+            message = str(e)
             time.sleep(0.5)
         else:
             return
-    pytest.exit("Edgedb never came up", returncode=1)
+    pytest.exit(f"Edgedb never came up: {message}", returncode=1)
 
 
 @pytest.fixture
@@ -93,7 +95,7 @@ async def wait_for_webapp_to_come_up(async_test_client: AsyncClient):
 
 @pytest.fixture
 async def restart_api(async_test_client):
-    (Path(__file__).parent.parent / "app" / "main.py").touch()
+    (Path(__file__).parent.parent / "src" / "allocation" / "app" / "main.py").touch()
     time.sleep(0.5)
     await wait_for_webapp_to_come_up(async_test_client)
 

@@ -9,7 +9,8 @@ services:
     env_file:
       - ./.env
     volumes:
-      - ./:/app
+      - "./src:/src"
+      - "./tests:/tests"
     ports:
       - "5005:8000"
 
@@ -17,16 +18,20 @@ services:
     image: edgedb/edgedb:latest
     env_file:
       - ./.env
+    environment:
+      EDGEDB_SERVER_ADMIN_UI: "enabled"
+      EDGEDB_SERVER_PASSWORD: "${DB_ROOT_PASSWORD}"
+      EDGEDB_SERVER_PORT: "${DB_PORT:-5656}"
+      EDGEDB_SERVER_SECURITY: "insecure_dev_mode"
     ports:
-      - "56565:5656"
+      - "5656:5656"
     volumes:
-      - edgedb_data:/var/lib/edgedb/data
-      - ./dbschema:/dbschema
-    command: ["sh", "-c", "edgedb --host=localhost --port=5656 migrate"]
-
-
+      - "edgedb_data:/var/lib/edgedb/data"
+      - "./src/allocation/dbschema:/dbschema"
+    healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:5656/server/status/ready"]
+        interval: 5s
+        timeout: 1s
+        retries: 10
 volumes:
   edgedb_data:
-
-# makemigrations
-# docker-compose exec edgedb edgedb --tls-security=insecure migrate

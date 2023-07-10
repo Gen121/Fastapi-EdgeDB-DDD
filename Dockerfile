@@ -1,7 +1,13 @@
 FROM python:3.10.12-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip3 install -r requirements.txt --no-cache-dir
+RUN python -m pip install --upgrade pip
+
+COPY requirements.txt /tmp/
+RUN pip install -r /tmp/requirements.txt
 COPY .env .
-COPY *.py /app/
+RUN mkdir -p /src
+COPY src /src
+RUN pip install -e /src
+COPY tests /tests
+
+WORKDIR /src/allocation/app
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

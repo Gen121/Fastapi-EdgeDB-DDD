@@ -4,7 +4,7 @@ from http import HTTPStatus
 import pytest  # noqa
 from httpx import AsyncClient
 
-from dbschema import config
+from allocation.dbschema import config
 
 
 def random_suffix() -> str:

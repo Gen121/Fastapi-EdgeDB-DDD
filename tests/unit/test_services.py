@@ -1,7 +1,7 @@
 import pytest
-import domain.model as model
-import repositories.repository as repository
-import services.services as services
+import allocation.domain.model as model
+import allocation.repositories.repository as repository
+import allocation.services.services as services
 
 
 class FakeRepository(repository.AbstractRepository):
@@ -32,7 +32,7 @@ class FakeSession:
 async def test_add_batch():
     repo, session = FakeRepository([]), FakeSession()
     await services.add_batch("b1", "CRUNCHY-ARMCHAIR", 100, None, set(), repo, session=session)
-    assert repo.get(reference="b1") is not None
+    assert await repo.get(reference="b1") is not None
 
 
 async def test_allocate_returns_allocation():

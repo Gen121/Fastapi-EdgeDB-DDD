@@ -7,8 +7,8 @@ import json
 
 import pytest
 
-import repositories.repository as repository
-from adapters.pyd_model import Batch, OrderLine
+import allocation.repositories.repository as repository
+from allocation.adapters.pyd_model import Batch, OrderLine
 
 
 def random_num() -> int:
