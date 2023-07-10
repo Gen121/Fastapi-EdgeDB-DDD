@@ -5,8 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-import domain.model as model
-from domain.model import OutOfStock  # noqa
+import allocation.domain.model as model
+from allocation.domain.model import OutOfStock  # noqa
 
 
 class OrderLine(BaseModel, model.OrderLine):

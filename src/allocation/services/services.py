@@ -1,8 +1,8 @@
 from datetime import date
 
-import domain.model as model
-from adapters.pyd_model import Batch, OrderLine
-from repositories.repository import AbstractRepository
+import allocation.domain.model as model
+from allocation.adapters.pyd_model import Batch, OrderLine
+from allocation.repositories.repository import AbstractRepository
 
 
 class InvalidSku(Exception):

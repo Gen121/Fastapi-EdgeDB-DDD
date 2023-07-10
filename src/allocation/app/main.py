@@ -3,14 +3,17 @@ from http import HTTPStatus
 from uuid import UUID
 
 import edgedb
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from starlette.middleware.cors import CORSMiddleware
 
-import repositories.repository as repository
-import services.services as services
-from __init__ import get_edgedb_client
-from adapters import pyd_model as model
-from dbschema import get_edgedb_dsn
+import allocation.repositories.repository as repository
+import allocation.services.services as services
+from allocation.adapters import pyd_model as model
+from allocation.dbschema import get_edgedb_dsn
+
+
+def get_edgedb_client(request: Request) -> edgedb.AsyncIOClient:
+    return request.app.state.edgedb
 
 
 async def setup_edgedb(app, test_db: bool = False):

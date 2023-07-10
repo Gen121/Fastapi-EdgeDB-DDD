@@ -3,7 +3,7 @@ from uuid import UUID
 
 import edgedb
 
-import adapters.pyd_model as model
+import allocation.adapters.pyd_model as model
 
 
 class AbstractRepository(abc.ABC):
