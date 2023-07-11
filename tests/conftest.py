@@ -1,6 +1,5 @@
 # pytest: disable=redefined-outer-name
 import time
-from datetime import date
 from http import HTTPStatus
 from pathlib import Path
 

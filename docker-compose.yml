@@ -8,6 +8,8 @@ services:
       - edgedb
     env_file:
       - ./.env
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
     volumes:
       - "./src:/src"
       - "./tests:/tests"
