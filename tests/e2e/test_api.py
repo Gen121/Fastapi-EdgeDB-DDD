@@ -42,7 +42,7 @@ async def post_to_add_batch(async_test_client, ref, sku, qty, eta):
 
 
 @pytest.mark.usefixtures('restart_api')
-async def test_api_returns_allocation(add_stock, async_test_client: AsyncClient):
+async def test_api_returns_allocation(async_test_client: AsyncClient):
     sku, othersku = random_sku(), random_sku('other')
     earlybatch = random_batchref(1)
     laterbatch = random_batchref(2)
