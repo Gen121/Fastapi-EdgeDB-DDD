@@ -35,7 +35,7 @@ class EdgeDBRepository(AbstractRepository):
                 LIMIT 1
             """,
             uuid=uuid, reference=reference)
-        return model.Batch.from_orm(obj_)
+        return model.Batch.model_validate(obj_)
 
     async def add(self, batch: model.Batch) -> None:
         return await self.add_batch(batch)
@@ -80,11 +80,11 @@ class EdgeDBRepository(AbstractRepository):
             with obj := <json>$data,
             select Batch filter .reference = <str>obj['reference'];
             """,
-            data=batch.json()
+            data=batch.model_dump_json()
         )
 
     async def list(self) -> list[model.Batch]:
         objects = await self.client.query(
             """SELECT Batch {**}"""
         )
-        return [model.Batch.from_orm(obj) for obj in objects]
+        return [model.Batch.model_validate(obj) for obj in objects]

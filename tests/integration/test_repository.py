@@ -33,7 +33,7 @@ async def test_repository_can_save_a_batch(async_client_db):
         reference=bath_ref,
         sku="RUSTY-SOAPDISH",
     )
-    batch_db = Batch.parse_raw(json_)
+    batch_db = Batch.model_validate_json(json_)
     assert batch_db == batch
 
 

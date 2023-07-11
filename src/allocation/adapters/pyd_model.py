@@ -3,17 +3,22 @@ from __future__ import annotations
 from datetime import date
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 import allocation.domain.model as model
 from allocation.domain.model import OutOfStock  # noqa
 
 
 class OrderLine(BaseModel, model.OrderLine):
-    id: UUID | None = Field(default=None, exclude=True)
     sku: str
     qty: int
     orderid: str
+    id: UUID | None = Field(default=None, exclude=True)
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        frozen=True
+    )
 
     def __hash__(self):
         return hash((self.sku, self.qty, self.orderid))
@@ -28,10 +33,6 @@ class OrderLine(BaseModel, model.OrderLine):
             other.qty == self.qty,
         ))
 
-    class Config:
-        from_attributes = True
-        frozen = True
-
 
 class OrderLineWithAllocatedIn(OrderLine):
     allocated_in: Batch
@@ -45,6 +46,10 @@ class Batch(BaseModel, model.Batch):
     purchased_quantity: int
     allocations: set[OrderLine | None] | None = Field(default_factory=set)
 
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
     def __hash__(self):
         return hash(self.reference)
 
@@ -52,9 +57,6 @@ class Batch(BaseModel, model.Batch):
         if not isinstance(other, Batch):
             return False
         return other.reference == self.reference
-
-    class Config:
-        from_attributes = True
 
 
 OrderLineWithAllocatedIn.model_rebuild()
