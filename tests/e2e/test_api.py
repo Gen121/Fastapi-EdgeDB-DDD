@@ -54,7 +54,6 @@ async def test_api_returns_allocation(async_test_client: AsyncClient):
     url = config.get_api_url()
     r = await async_test_client.post(f'{url}/allocate', json=data)
     assert r.status_code == 201
-    assert True
     assert r.json()['batchref'] == earlybatch
 
 
