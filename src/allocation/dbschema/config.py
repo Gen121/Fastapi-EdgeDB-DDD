@@ -1,15 +1,10 @@
 import os
-import random
 
 from fastapi import Request
 from dotenv import load_dotenv
 import edgedb
 if env := load_dotenv('.venv') is not True:
     load_dotenv('/.venv')
-
-
-def ttest() -> str:
-    return str(os.environ.get("TEST", f"NoN{random.randint(0, 999)}"))
 
 
 def get_edgedb_dsn(*, test: bool = False) -> str:
