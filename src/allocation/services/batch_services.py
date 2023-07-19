@@ -37,6 +37,7 @@ async def get_batch(
 ) -> Batch:
     async with uow:
         res = await uow.batches.get(reference=reference, uuid=uuid)
+        await uow.commit()
     return res
 
 
@@ -45,6 +46,7 @@ async def get_all(
 ) -> list[Batch]:
     async with uow:
         res = await uow.batches.list()
+        await uow.commit()
     return res
 
 
@@ -60,6 +62,7 @@ async def add_batch(
         await allocate_in_current_batch(batch, allocations)
     async with uow:
         await uow.batches.add(batch)
+        await uow.commit()
 
 
 async def allocate(
@@ -74,4 +77,5 @@ async def allocate(
         batchref = model.allocate(line, batches)
         [current_batch] = [b for b in batches if b.reference == batchref]
         await uow.batches.add(current_batch)
+        await uow.commit()
     return batchref

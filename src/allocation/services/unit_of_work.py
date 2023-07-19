@@ -19,8 +19,17 @@ class EdgedbUnitOfWork():
         self.batches = repository.EdgeDBRepository(self.transaction)
         await self.transaction.__aenter__()
 
-    async def __aexit__(self, extype, ex, tb) -> None:
-        await self.transaction.__aexit__(extype, ex, tb)
+    async def __aexit__(self, extype, ex, tb) -> bool | None:
+        try:
+            await self.transaction.__aexit__(Exception, Exception(), tb)
+        except (edgedb.errors.InternalClientError, edgedb.errors.InterfaceError):
+            await self.async_client.aclose()
+            return True
+        await self.async_client.aclose()
+        return None
+
+    async def commit(self):
+        return await self.transaction.__aexit__(None, None, None)
 
 
 async def get_uow(
