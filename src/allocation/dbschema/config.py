@@ -1,22 +1,25 @@
 import os
+import random
 
 from fastapi import Request
 from dotenv import load_dotenv
 import edgedb
-load_dotenv('.env')
+if env := load_dotenv('.venv') is not True:
+    load_dotenv('/.venv')
+
+
+def ttest() -> str:
+    return str(os.environ.get("TEST", f"NoN{random.randint(0, 999)}"))
 
 
 def get_edgedb_dsn(*, test: bool = False) -> str:
-    host = os.environ.get('APP_NAME', 'localhost')
-    # host = "localhost"
-    port = os.environ.get('EDGEDB_PORT', 5656)
-    # port = 10704
-    password = os.environ.get("APP_NAME", None)
-    # password = "cB2pjoYWCudiwVryOmXP2YhL"
-    user = os.environ.get("EDGEDB_SERVER_USER", "edgedb")
+    host = os.environ.get('DB_HOSTNAME')
+    port = os.environ.get('DB_PORT')
+    password = os.environ.get("DB_ROOT_PASSWORD")
+    user = os.environ.get("DB_USER_NAME")
     db_name = (
-        os.environ.get("EDGEDB_DATABASE", "edgedb") if not test
-        else "edgedb"
+        os.environ.get("DB_NAME") if not test
+        else os.environ.get("DB_TEST_NAME")
     )
     return f'edgedb://{user}:{password}@{host}:{port}/{db_name}'
 

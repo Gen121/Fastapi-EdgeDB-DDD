@@ -6,11 +6,10 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - edgedb
-    env_file:
-      - ./.env
     environment:
       - PYTHONDONTWRITEBYTECODE=1
     volumes:
+      - ".env:/.venv"
       - "./src:/src"
       - "./tests:/tests"
     ports:
@@ -32,7 +31,7 @@ services:
       - "./src/allocation/dbschema:/dbschema"
     healthcheck:
         test: ["CMD", "curl", "-f", "http://localhost:5656/server/status/ready"]
-        interval: 5s
+        interval: 3s
         timeout: 1s
         retries: 10
 volumes:
