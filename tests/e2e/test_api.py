@@ -52,9 +52,11 @@ async def test_api_returns_allocation(async_test_client: AsyncClient):
     await post_to_add_batch(async_test_client, otherbatch, othersku, 100, None)
     data = {'orderid': random_orderid(), 'sku': sku, 'qty': 3}
     url = config.get_api_url()
-    r = await async_test_client.post(f'{url}/allocate', json=data)
-    assert r.status_code == 201
-    assert r.json()['batchref'] == earlybatch
+    req = await async_test_client.post(f'{url}/allocate', json=data)
+    res = await async_test_client.get(f'{url}/batch', params={'reference': f'{earlybatch}'})
+    assert req.status_code == 201
+    assert req.json()['batchref'] == earlybatch
+    assert data in res.json()['allocations']
 
 
 @pytest.mark.usefixtures('restart_api')
