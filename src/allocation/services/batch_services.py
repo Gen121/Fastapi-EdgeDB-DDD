@@ -25,9 +25,10 @@ async def allocate_in_current_batch(
     to_allocate = [OrderLine(**orderline) for orderline in orrderlines]
     for orderline in to_allocate:
         batch.allocate(orderline)
-    if len(batch.allocations) < len(to_allocate):
-        raise OutOfStockInBatch(
-            "There is not enough stock for the {line.sku} article in this batch")
+    if isinstance(batch.allocations, set):
+        if len(batch.allocations) < len(to_allocate):
+            raise OutOfStockInBatch(
+                "There is not enough stock for the {line.sku} article in this batch")
 
 
 async def get_batch(
