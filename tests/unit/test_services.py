@@ -1,5 +1,3 @@
-from contextlib import AbstractAsyncContextManager
-
 import pytest
 
 import allocation.domain.model as model
@@ -77,3 +75,13 @@ async def test_allocate_errors_for_invalid_sku():
     except batch_services.InvalidSku as e:
         with pytest.raises(batch_services.InvalidSku, match="Invalid sku NONEXISTENTSKU"):
             raise e
+
+
+async def test_get_all(random_batchref):
+    uow = FakeUnitOfWork()
+    batch = model.Batch(f"get_all_{random_batchref}", "CRUNCHY-ARMCHAIR", 100, None)
+    second_batch = model.Batch(f"get_all_{random_batchref}", "CRUNCHY-ARMCHAIR", 100, None)
+    uow.batches = FakeRepository({batch, second_batch})
+    all_batch = await batch_services.get_all(uow=uow)
+    assert batch in all_batch
+    assert second_batch in all_batch

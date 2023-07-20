@@ -1,19 +1,9 @@
 import datetime
-import uuid
-import edgedb
 
 import pytest
 
 from allocation.adapters import pyd_model as model
 from allocation.services import unit_of_work
-
-
-def random_suffix() -> str:
-    return uuid.uuid4().hex[:6]
-
-
-def random_batchref(name: str | int = "") -> str:
-    return f"batch-{name}-{random_suffix()}"
 
 
 async def insert_batch(async_client_db, ref, sku, qty, eta):
@@ -42,8 +32,8 @@ async def get_allocated_batch_ref(async_client_db, orderid, sku):
     return batchref
 
 
-async def test_uow_can_retrieve_a_batch_and_allocate_to_it(async_client_db):
-    batchref_expected = random_batchref("can_retrieve_a_batch_and_allocate_to_it")
+async def test_uow_can_retrieve_a_batch_and_allocate_to_it(async_client_db, random_batchref):
+    batchref_expected = random_batchref
     await insert_batch(async_client_db, batchref_expected, "HIPSTER-WORKBENCH", 100, datetime.date(2011, 1, 2))
 
     uow = unit_of_work.EdgedbUnitOfWork(async_client_db)
@@ -58,8 +48,8 @@ async def test_uow_can_retrieve_a_batch_and_allocate_to_it(async_client_db):
     assert batchref == batchref_expected
 
 
-async def test_rolls_back_uncommitted_work_by_default(async_client_db: edgedb.AsyncIOClient):
-    batchref_expected = random_batchref("rolls_back_uncommitted_work_by_default")
+async def test_rolls_back_uncommitted_work_by_default(async_client_db, random_batchref):
+    batchref_expected = (f"rolls_back_uncommitted_work_by_default_{random_batchref}")
     uow = unit_of_work.EdgedbUnitOfWork(async_client_db)
     batch = model.Batch(
         reference=batchref_expected,
@@ -74,11 +64,11 @@ async def test_rolls_back_uncommitted_work_by_default(async_client_db: edgedb.As
     assert rows == []
 
 
-async def test_rolls_back_on_error(async_client_db):
+async def test_rolls_back_on_error(async_client_db, random_batchref):
     class MyException(Exception):
         pass
 
-    batchref_expected = random_batchref("rolls_back_on_error")
+    batchref_expected = f"rolls_back_on_error_{random_batchref}"
     uow = unit_of_work.EdgedbUnitOfWork(async_client_db)
     batch = model.Batch(
         reference=batchref_expected,

@@ -1,5 +1,6 @@
 # pytest: disable=redefined-outer-name
 import time
+import uuid
 from http import HTTPStatus
 from pathlib import Path
 
@@ -97,3 +98,22 @@ async def restart_api(async_test_client):
     (Path(__file__).parent.parent / "src" / "allocation" / "app" / "main.py").touch()
     time.sleep(0.5)
     await wait_for_webapp_to_come_up(async_test_client)
+
+
+def random_suffix() -> str:
+    return uuid.uuid4().hex[:6]
+
+
+@pytest.fixture
+def random_sku(name: str | int = "") -> str:
+    return f"sku-{name}-{random_suffix()}"
+
+
+@pytest.fixture
+def random_batchref(name: str | int = "") -> str:
+    return f"batch-{name}-{random_suffix()}"
+
+
+@pytest.fixture
+def random_orderid(name: str | int = "") -> str:
+    return f"order-{name}-{random_suffix()}"

@@ -1,6 +1,5 @@
 # pylint: disable=protected-access
 import datetime
-import random
 import zoneinfo
 from uuid import UUID
 import json
@@ -11,12 +10,8 @@ import allocation.repositories.repository as repository
 from allocation.adapters.pyd_model import Batch, OrderLine
 
 
-def random_num() -> int:
-    return random.randint(10000, 99999)
-
-
-async def test_repository_can_save_a_batch(async_client_db):
-    bath_ref = f'can_save_a_batch_{random_num()}'
+async def test_repository_can_save_a_batch(async_client_db, random_batchref):
+    bath_ref = f'repository_can_save_{random_batchref}'
     tz = zoneinfo.ZoneInfo("America/Buenos_Aires")
     date = datetime.datetime.now(tz).date()
     batch = Batch(
@@ -93,12 +88,12 @@ async def add_allocateion_to_batch_by_ids(async_client_db, orderline_id: UUID, b
     )
 
 
-async def test_repository_can_retrieve_a_batch_with_allocations(async_client_db):
-    orderid = f'inserted_order_line_{random_num()}'
+async def test_repository_can_retrieve_a_batch_with_allocations(async_client_db, random_batchref, random_orderid):
+    orderid = f'with_allocation_{random_orderid}'
     orderline_id = await insert_order_line(async_client_db, orderid)
     batch1_id = await insert_batch(
         async_client_db, f"repository_can_retrieve_a_batch_with_{orderid}")
-    await insert_batch(async_client_db, f"inserted_batch_{random_num()}")
+    await insert_batch(async_client_db, f"inserted_{random_batchref}")
     await add_allocateion_to_batch_by_ids(async_client_db, orderline_id, batch1_id)
 
     repo = repository.EdgeDBRepository(async_client_db)
@@ -131,10 +126,12 @@ async def get_allocations(async_client_db, reference):
     return {i['orderid'] for i in json.loads(json_)}
 
 
-async def test_updating_a_batch(async_client_db):
-    order1 = OrderLine(orderid=f"order_{random_num()}", sku="WEATHERED-BENCH", qty=10)
-    order2 = OrderLine(orderid=f"order_{random_num()}", sku="WEATHERED-BENCH", qty=20)
-    batch_reference = f"batch_{random_num()}"
+async def test_repository_updating_a_batch(async_client_db, random_orderid, random_batchref):
+    order1 = OrderLine(
+        orderid=f"updating_a_batch_{random_orderid}", sku="WEATHERED-BENCH", qty=10)
+    order2 = OrderLine(
+        orderid=f"updating_a_batch_{random_orderid}_2", sku="WEATHERED-BENCH", qty=20)
+    batch_reference = f"updating_a_batch_{random_batchref}"
     batch = Batch(reference=batch_reference, sku="WEATHERED-BENCH",
                   purchased_quantity=100, eta=None)
     batch.allocate(order1)
@@ -148,10 +145,22 @@ async def test_updating_a_batch(async_client_db):
     assert await get_allocations(async_client_db, batch_reference) == {order1.orderid, order2.orderid}
 
 
-async def test_error_for_get_without_parametrs(async_client_db):
+async def test_repository_error_for_get_without_parametrs(async_client_db):
     repo = repository.EdgeDBRepository(async_client_db)
     try:
         await repo.get()
     except Exception as e:
         with pytest.raises(Exception, match="Необходим UUID или reference"):
             raise e
+
+
+async def test_repository_get_all_batches(async_client_db, random_batchref):
+    batch_reference = f"repository_get_all_{random_batchref}"
+    batch_reference_other = f"repository_get_all_{random_batchref}_other"
+    batch_id = await insert_batch(async_client_db, batch_reference)
+    batch_other_id = await insert_batch(async_client_db, batch_reference_other)
+    repo = repository.EdgeDBRepository(async_client_db)
+    all_batches = await repo.list()
+    all_batches_ids = [b.id for b in all_batches]
+    assert batch_id in all_batches_ids
+    assert batch_other_id in all_batches_ids
