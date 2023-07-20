@@ -1,7 +1,12 @@
+import os
 from functools import cache
-from pydantic import ConfigDict
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+if os.path.exists(".venv"):
+    ENV_FILE = ".venv"
+else:
+    ENV_FILE = "/.venv"
 
 
 class Settings(BaseSettings):
@@ -15,7 +20,7 @@ class Settings(BaseSettings):
     api_host: str
     api_port: int
 
-    model_config = ConfigDict(env_file='.venv')
+    model_config = SettingsConfigDict(env_file=ENV_FILE, extra="ignore")
 
     def get_edgedb_dsn(self, *, test_db: bool = False) -> str:
         db_name = self.db_name if not test_db else self.db_test_name
