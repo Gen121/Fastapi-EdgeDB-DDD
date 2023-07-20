@@ -1,6 +1,7 @@
 # app
 edgedb
 fastapi[all]
+pydantic-settings
 uvicorn[standard]
 
 # dev/tests

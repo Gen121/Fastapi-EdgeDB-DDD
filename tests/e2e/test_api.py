@@ -2,7 +2,10 @@ from http import HTTPStatus
 
 import pytest
 
-from allocation.dbschema import config
+from allocation.app.settings import settings
+
+
+API_URL = settings.get_api_url()
 
 
 async def test_health_check(async_test_client):
@@ -11,9 +14,8 @@ async def test_health_check(async_test_client):
 
 
 async def post_to_add_batch(async_test_client, ref, sku, qty, eta):
-    url = config.get_api_url()
     r = await async_test_client.post(
-        f"{url}/add_batch", json={
+        f"{API_URL}/add_batch", json={
             "reference": ref,
             "sku": sku,
             "purchased_quantity": qty,
@@ -33,9 +35,8 @@ async def test_api_returns_allocation(async_test_client, random_batchref, random
     await post_to_add_batch(async_test_client, earlybatch, sku, 100, "2011-01-01")
     await post_to_add_batch(async_test_client, otherbatch, othersku, 100, None)
     data = {'orderid': random_orderid, 'sku': sku, 'qty': 3}
-    url = config.get_api_url()
-    req = await async_test_client.post(f'{url}/allocate', json=data)
-    res = await async_test_client.get(f'{url}/batch', params={'reference': f'{earlybatch}'})
+    req = await async_test_client.post(f'{API_URL}/allocate', json=data)
+    res = await async_test_client.get(f'{API_URL}/batch', params={'reference': f'{earlybatch}'})
     assert req.status_code == 201
     assert req.json()['batchref'] == earlybatch
     assert data in res.json()['allocations']
@@ -45,8 +46,7 @@ async def test_api_returns_allocation(async_test_client, random_batchref, random
 async def test_unhappy_path_returns_400_and_error_message(async_test_client, random_orderid, random_sku):
     unknown_sku, orderid = random_sku, random_orderid
     data = {'orderid': orderid, 'sku': unknown_sku, 'qty': 20}
-    url = config.get_api_url()
-    r = await async_test_client.post(f'{url}/allocate', json=data)
+    r = await async_test_client.post(f'{API_URL}/allocate', json=data)
     assert r.status_code == 400
     assert r.json()['detail'] == f'Invalid sku {unknown_sku}'
 

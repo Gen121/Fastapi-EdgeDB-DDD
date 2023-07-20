@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 from allocation.app.main import make_app
-from allocation.dbschema import get_api_url, get_edgedb_dsn
+from allocation.app.settings import settings
 
 
 async def wait_for_edgedb_to_come_up(async_client_db: edgedb.AsyncIOClient):
@@ -30,7 +30,7 @@ async def wait_for_edgedb_to_come_up(async_client_db: edgedb.AsyncIOClient):
 @pytest.fixture
 async def async_client_db() -> edgedb.AsyncIOClient:
     async_client_db = edgedb.create_async_client(
-        get_edgedb_dsn(test=True),
+        settings.get_edgedb_dsn(test_db=True),
         tls_security='insecure'
     )
     await wait_for_edgedb_to_come_up(async_client_db)
@@ -41,7 +41,7 @@ async def async_client_db() -> edgedb.AsyncIOClient:
 async def async_test_client(async_client_db: edgedb.AsyncIOClient):
     app = make_app()
     app.state.edgedb = async_client_db
-    async with AsyncClient(app=app, base_url=get_api_url()) as client:
+    async with AsyncClient(app=app, base_url=settings.get_api_url()) as client:
         yield client
     client, app.state.edgedb = app.state.edgedb, None
     await client.aclose()
@@ -63,7 +63,7 @@ def tx_test_client(mocker):
 
 async def tx_setup_edgedb(app):
     client = app.state.edgedb_client = edgedb.create_async_client(
-        get_edgedb_dsn(test=True),
+        settings.get_edgedb_dsn(test_db=True),
         tls_security='insecure'
     )
     await client.ensure_connected()
