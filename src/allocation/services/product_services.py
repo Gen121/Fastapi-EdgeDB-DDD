@@ -1,8 +1,8 @@
 from datetime import date
-import uuid
+from typing import Sequence
 
 import allocation.domain.model as model
-from allocation.adapters.pyd_model import Batch, OrderLine
+from allocation.adapters.pyd_model import Batch, OrderLine, Product
 from allocation.services import unit_of_work
 
 
@@ -14,7 +14,7 @@ class OutOfStockInBatch(Exception):
     pass
 
 
-async def is_valid_sku(sku, batches) -> bool:
+async def is_valid_sku(sku: str, batches: Sequence[model.Batch]) -> bool:
     return sku in {b.sku for b in batches}
 
 
@@ -31,13 +31,12 @@ async def allocate_in_current_batch(
                 "There is not enough stock for the {line.sku} article in this batch")
 
 
-async def get_batch(
+async def get(
     uow: unit_of_work.EdgedbUnitOfWork,
-    reference: str | None = None,
-    uuid: uuid.UUID | None = None,
-) -> Batch:
+    sku: str,
+) -> Product:
     async with uow:
-        res = await uow.batches.get(reference=reference, uuid=uuid)
+        res = await uow.products.get(sku=sku)
         await uow.commit()
     return res
 
@@ -46,7 +45,7 @@ async def get_all(
         uow: unit_of_work.EdgedbUnitOfWork,
 ) -> list[Batch]:
     async with uow:
-        res = await uow.batches.list()
+        res = await uow.products.list()
         await uow.commit()
     return res
 
@@ -62,7 +61,7 @@ async def add_batch(
     if allocations:
         await allocate_in_current_batch(batch, allocations)
     async with uow:
-        await uow.batches.add(batch)
+        await uow.products.add(batch)
         await uow.commit()
 
 
@@ -72,11 +71,11 @@ async def allocate(
 ) -> str:
     line = OrderLine(orderid=orderid, sku=sku, qty=qty)
     async with uow:
-        batches = await uow.batches.list()
-        if not await is_valid_sku(line.sku, batches):
+        product: model.Product = await uow.products.get(sku)
+        if not await is_valid_sku(line.sku, product.batches):
             raise InvalidSku(f'Invalid sku {line.sku}')
-        batchref = model.allocate(line, batches)
-        [current_batch] = [b for b in batches if b.reference == batchref]
-        await uow.batches.add(current_batch)
+        batchref = product.allocate(line)
+        [current_batch] = [b for b in product.batches if b.reference == batchref]
+        await uow.products.add(current_batch)
         await uow.commit()
     return batchref
