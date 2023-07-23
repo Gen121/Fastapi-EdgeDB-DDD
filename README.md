@@ -2,11 +2,10 @@
 
 ## Описание
 
-Проект должен воспроизвестиу чебный материал из учебника, использя при этом другой веб фреймвок и базу данных.
+Цель проекта  воспроизвести проект из учебника, протестировав насколько удобно заменять благодаря использованию чистой архитектуры компоненты системы, а именно  фреймворк и базу данных.
 
 ## Технологии
 FastAPI, EdgeDB, Pytest, Docker
-
 
 
 ## Building the containers
@@ -23,18 +22,8 @@ make all # builds, brings containers up, runs tests
 ## Creating a local virtualenv (optional)
 
 ```sh
-python3.8 -m venv .venv && source .venv/bin/activate # or however you like to create virtualenvs
+python3 -m venv venv && source venv/bin/activate # or however you like to create virtualenvs
 
-# for chapter 1
-pip install pytest 
-
-# for chapter 2
-pip install pytest sqlalchemy
-
-# for chapter 4+5
-pip install requirements.txt
-
-# for chapter 6+
 pip install requirements.txt
 pip install -e src/
 ```
