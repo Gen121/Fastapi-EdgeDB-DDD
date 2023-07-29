@@ -1,15 +1,15 @@
-CREATE MIGRATION m15gbchtidguohxkszvcldyqdyanyxemqyuq2vybwgcb64ovm6z2ga
+CREATE MIGRATION m1ndfvew3ztvd6nextuh6rbzooob3qekvdvje3yze5kqqs36fgoxfa
     ONTO initial
 {
   CREATE FUTURE nonrecursive_access_policies;
   CREATE TYPE default::Batch {
+      CREATE PROPERTY sku: std::str {
+          CREATE CONSTRAINT std::max_len_value(255);
+      };
       CREATE PROPERTY eta: cal::local_date;
       CREATE REQUIRED PROPERTY purchased_quantity: std::int16;
       CREATE PROPERTY reference: std::str {
           CREATE CONSTRAINT std::exclusive;
-          CREATE CONSTRAINT std::max_len_value(255);
-      };
-      CREATE PROPERTY sku: std::str {
           CREATE CONSTRAINT std::max_len_value(255);
       };
   };
@@ -26,5 +26,33 @@ CREATE MIGRATION m15gbchtidguohxkszvcldyqdyanyxemqyuq2vybwgcb64ovm6z2ga
   };
   ALTER TYPE default::Batch {
       CREATE MULTI LINK allocations := (.<allocated_in[IS default::OrderLine]);
+  };
+  CREATE TYPE default::Product {
+      CREATE REQUIRED PROPERTY sku: std::str {
+          CREATE CONSTRAINT std::exclusive;
+          CREATE CONSTRAINT std::max_len_value(255);
+      };
+      CREATE REQUIRED PROPERTY version_number: std::int16;
+  };
+  ALTER TYPE default::Batch {
+      CREATE LINK product: default::Product {
+          CREATE REWRITE
+              INSERT 
+              USING (SELECT
+                  default::Product
+              FILTER
+                  (.sku = __subject__.sku)
+              );
+          CREATE REWRITE
+              UPDATE 
+              USING (SELECT
+                  default::Product
+              FILTER
+                  (.sku = __subject__.sku)
+              );
+      };
+  };
+  ALTER TYPE default::Product {
+      CREATE MULTI LINK batches := (.<product[IS default::Batch]);
   };
 };

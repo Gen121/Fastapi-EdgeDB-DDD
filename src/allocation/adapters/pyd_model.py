@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from uuid import UUID
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 import allocation.domain.model as model
 from allocation.domain.model import OutOfStock  # noqa
@@ -57,6 +57,20 @@ class Batch(BaseModel, model.Batch):
         if not isinstance(other, Batch):
             return False
         return other.reference == self.reference
+
+
+class Product(BaseModel, model.Product):
+    id: UUID | None = Field(default=None, exclude=True,)
+    sku: str
+    batches: list[Batch] | None = Field(default_factory=list)
+    version_number: int
+
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
+
+    def __hash__(self):
+        return hash(self.sku)
 
 
 OrderLineWithAllocatedIn.model_rebuild()
