@@ -2,37 +2,23 @@ import pytest
 
 import allocation.domain.model as model
 import allocation.repositories.repository as repository
-import allocation.services.batch_services as batch_services
+import allocation.services.product_services as product_services
 
 
 class FakeRepository(repository.AbstractRepository):
-    @staticmethod
-    def for_batch(ref, sku, qty, eta=None):
-        return FakeRepository([model.Batch(ref, sku, qty, eta), ])
+    def __init__(self, products):
+        self._products = set(products)
 
-    def __init__(self, batches):
-        self._batches = set(batches)
+    async def add(self, product):
+        self._products.add(product)
 
-    async def add(self, batch):
-        self._batches.add(batch)
-
-    async def get(self, reference):
-        return next(b for b in self._batches if b.reference == reference)
-
-    async def list(self):
-        return list(self._batches)
-
-
-class FakeSession:
-    committed = False
-
-    def commit(self):
-        self.committed = True
+    async def get(self, sku) -> model.Product | None:
+        return next((p for p in self._products if p.sku == sku), None)
 
 
 class FakeUnitOfWork():
     def __init__(self):
-        self.batches = FakeRepository([])
+        self.products = FakeRepository([])
         self.committed = False
 
     async def __aenter__(self):
@@ -42,7 +28,7 @@ class FakeUnitOfWork():
         await self.rollback()
 
     async def commit(self):
-        self.session = True
+        self.committed = True
 
     async def rollback(self):
         pass
@@ -50,38 +36,37 @@ class FakeUnitOfWork():
 
 async def test_add_batch():
     uow = FakeUnitOfWork()
-    await batch_services.add_batch(uow, "b1", "CRUNCHY-ARMCHAIR", 100, None, set())
-    assert await uow.batches.get(reference="b1") is not None
+    await product_services.add_batch(uow, "b1", "CRUNCHY-ARMCHAIR", 100, None, set())
+    assert await uow.products.get(sku="CRUNCHY-ARMCHAIR") is not None
+    assert uow.committed
+
+
+async def test_add_batch_for_existing_product():
+    uow = FakeUnitOfWork()
+    await product_services.add_batch(uow, "b1", "GARISH-RUG", 100, None, set())
+    await product_services.add_batch(uow, "b2", "GARISH-RUG", 99, None, set())
+    product = await uow.products.get("GARISH-RUG")
+    assert "b2" in [b.reference for b in product.batches]
 
 
 async def test_allocate_returns_allocation():
     uow = FakeUnitOfWork()
-    await batch_services.add_batch(
+    await product_services.add_batch(
         uow=uow, reference="batch1", sku="COMPLICATED-LAMP",
         purchased_quantity=100, eta=None, allocations=set()
     )
-    result = await batch_services.allocate(uow=uow, orderid="o1", sku="COMPLICATED-LAMP", qty=10)
+    result = await product_services.allocate(uow=uow, orderid="o1", sku="COMPLICATED-LAMP", qty=10)
     assert result == "batch1"
 
 
 async def test_allocate_errors_for_invalid_sku():
     uow = FakeUnitOfWork()
-    await batch_services.add_batch(
+    await product_services.add_batch(
         uow=uow, reference="b1", sku="AREALSKU",
         purchased_quantity=100, eta=None, allocations=set()
     )
     try:
-        await batch_services.allocate(uow=uow, orderid="o1", sku="NONEXISTENTSKU", qty=10)
-    except batch_services.InvalidSku as e:
-        with pytest.raises(batch_services.InvalidSku, match="Invalid sku NONEXISTENTSKU"):
+        await product_services.allocate(uow=uow, orderid="o1", sku="NONEXISTENTSKU", qty=10)
+    except product_services.InvalidSku as e:
+        with pytest.raises(product_services.InvalidSku, match="Invalid sku NONEXISTENTSKU"):
             raise e
-
-
-async def test_get_all(random_batchref):
-    uow = FakeUnitOfWork()
-    batch = model.Batch(f"get_all_{random_batchref}", "CRUNCHY-ARMCHAIR", 100, None)
-    second_batch = model.Batch(f"get_all_{random_batchref}", "CRUNCHY-ARMCHAIR", 100, None)
-    uow.batches = FakeRepository({batch, second_batch})
-    all_batch = await batch_services.get_all(uow=uow)
-    assert batch in all_batch
-    assert second_batch in all_batch
