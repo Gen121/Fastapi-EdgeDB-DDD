@@ -1,7 +1,5 @@
 from datetime import date
-from typing import Sequence
 
-import allocation.domain.model as model
 from allocation.adapters.pyd_model import Batch, OrderLine, Product
 from allocation.services import unit_of_work
 
@@ -14,10 +12,6 @@ class OutOfStockInBatch(Exception):
     pass
 
 
-async def is_valid_sku(sku: str, batches: Sequence[model.Batch]) -> bool:
-    return sku in {b.sku for b in batches}
-
-
 async def allocate_in_current_batch(
     batch: Batch,
     orrderlines: set[dict]
@@ -25,16 +19,15 @@ async def allocate_in_current_batch(
     to_allocate = [OrderLine(**orderline) for orderline in orrderlines]
     for orderline in to_allocate:
         batch.allocate(orderline)
-    if isinstance(batch.allocations, set):
-        if len(batch.allocations) < len(to_allocate):
-            raise OutOfStockInBatch(
-                "There is not enough stock for the {line.sku} article in this batch")
+    if len(batch.allocations) < len(to_allocate):
+        raise OutOfStockInBatch(
+            "There is not enough stock for the {line.sku} article in this batch")
 
 
 async def get(
     uow: unit_of_work.EdgedbUnitOfWork,
     sku: str,
-) -> Product:
+) -> Product | None:
     async with uow:
         res = await uow.products.get(sku=sku)
         await uow.commit()
@@ -61,7 +54,11 @@ async def add_batch(
     if allocations:
         await allocate_in_current_batch(batch, allocations)
     async with uow:
-        await uow.products.add(batch)
+        product = await uow.products.get(sku)
+        if not product:
+            product = Product(sku=sku, version_number=0, batches=[])
+        product.add_batch(batch)
+        await uow.products.add(product)
         await uow.commit()
 
 
@@ -71,11 +68,10 @@ async def allocate(
 ) -> str:
     line = OrderLine(orderid=orderid, sku=sku, qty=qty)
     async with uow:
-        product: model.Product = await uow.products.get(sku)
-        if not await is_valid_sku(line.sku, product.batches):
+        product = await uow.products.get(sku)
+        if not product:
             raise InvalidSku(f'Invalid sku {line.sku}')
         batchref = product.allocate(line)
-        [current_batch] = [b for b in product.batches if b.reference == batchref]
-        await uow.products.add(current_batch)
+        await uow.products.add(product)
         await uow.commit()
     return batchref

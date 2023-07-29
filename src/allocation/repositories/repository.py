@@ -1,18 +1,21 @@
 import abc
-from uuid import UUID
 
 import edgedb
 
 import allocation.adapters.pyd_model as model
 
 
+class SynchronousUpdateError(Exception):
+    pass
+
+
 class AbstractRepository(abc.ABC):
     @abc.abstractmethod
-    async def add(self, batch: model.Batch):
+    async def add(self, batch: model.Product):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def get(self, reference) -> model.Batch:
+    async def get(self, sku) -> model.Product | None:
         raise NotImplementedError
 
     async def list(self) -> list[model.Batch]:
@@ -23,25 +26,57 @@ class EdgeDBRepository(AbstractRepository):
     def __init__(self, async_client_db) -> None:
         self.client: edgedb.AsyncIOClient = async_client_db
 
-    async def get(self, *args, **kwargs) -> model.Batch:
-        return await self._get(*args, **kwargs)
-
-    async def _get(self, uuid: UUID | None = None, reference: str | None = None) -> model.Batch:
-        """Return Batch by UUID or Reference."""
-        if not any((uuid, reference)):
-            raise Exception('Необходим UUID или reference')
-
-        obj_ = await self.client.query_required_single(
-            """select Batch {**}
-                filter .id ?= <optional uuid>$uuid
-                or .reference ?= <optional str>$reference
+    async def get(self, sku: str, allocations: bool = True):
+        """Return Product by SKU."""
+        obj_ = await self.client.query_single(
+            f""" SELECT Product {{
+                  sku, version_number,
+                  batches: {{
+                      reference,
+                      sku,
+                      eta,
+                      purchased_quantity,
+                      {"allocations: { orderid, sku, qty }" if allocations else ""}
+                  }}
+                }}
+                FILTER .sku = <str>$sku
                 LIMIT 1
             """,
-            uuid=uuid, reference=reference)
-        return model.Batch.model_validate(obj_)
+            sku=sku)
+        return model.Product.model_validate(obj_) if obj_ else None
 
-    async def add(self, batch: model.Batch) -> None:
-        return await self.add_batch(batch)
+    async def add(self, product: model.Product):
+        product_db = await self.client.query_single(
+            """SELECT Product { version_number } FILTER .sku=<str>$sku""",
+            sku=product.sku
+        )
+        if product_db and product_db.version_number >= product.version_number:
+            raise SynchronousUpdateError()
+        return await self._add(product)
+
+    async def _add(self, product: model.Product) -> None:
+        await self.add_product(product)
+        for batch in product.batches:
+            await self.add_batch(batch)
+
+    async def add_product(self, product: model.Product):
+        data = product.model_dump_json(exclude={'batches'})
+        await self.client.query(
+            """with
+            obj := <json>$data,
+            INSERT Product {
+                sku := <str>obj['sku'],
+                version_number := <int16>obj['version_number'],
+            }
+            unless conflict on .sku else (
+                UPDATE Product set {
+                sku := <str>obj['sku'],
+                version_number := <int16>obj['version_number'],
+                }
+            )
+            """,
+            data=data
+        )
 
     async def add_batch(self, batch: model.Batch) -> None:
         data = batch.model_dump_json()

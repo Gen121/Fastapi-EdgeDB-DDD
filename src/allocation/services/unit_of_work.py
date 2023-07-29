@@ -7,7 +7,7 @@ from allocation.repositories import repository
 
 
 class EdgedbUnitOfWork():
-    batches: repository.EdgeDBRepository
+    products: repository.EdgeDBRepository
 
     def __init__(self, async_client) -> None:
         self.async_client: edgedb.AsyncIOClient = async_client
@@ -16,7 +16,7 @@ class EdgedbUnitOfWork():
         async for tx in self.async_client.transaction():
             self.transaction = tx
             break
-        self.batches = repository.EdgeDBRepository(self.transaction)
+        self.products = repository.EdgeDBRepository(self.transaction)
         await self.transaction.__aenter__()
 
     async def __aexit__(self, extype, ex, tb) -> bool | None:
@@ -25,6 +25,9 @@ class EdgedbUnitOfWork():
         except (edgedb.errors.InternalClientError, edgedb.errors.InterfaceError):
             await self.async_client.aclose()
             return True
+        # except repository.SynchronousUpdateError:
+        #     await self.async_client.aclose()
+        #     return False
         await self.async_client.aclose()
         return None
 

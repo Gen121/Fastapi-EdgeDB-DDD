@@ -1,13 +1,12 @@
 import functools
 from http import HTTPStatus
-from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException
 from starlette.middleware.cors import CORSMiddleware
 
-from allocation.services import batch_services, unit_of_work
 from allocation.adapters import pyd_model as model
 from allocation.dbschema.config import setup_edgedb, shutdown_edgedb
+from allocation.services import product_services, unit_of_work
 
 
 def make_app(test_db: bool = False):
@@ -28,19 +27,18 @@ def make_app(test_db: bool = False):
     async def health_check() -> dict[str, str]:
         return {"status": "Ok"}
 
-    @app.get('/batch')
-    async def get_batch(
-        uuid: UUID | None = None,
-        reference: str | None = None,
+    @app.get('/product')
+    async def get_product(
+        sku: str,
         uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
-    ) -> model.Batch:
-        return await batch_services.get_batch(uow, uuid=uuid, reference=reference)
+    ) -> model.Product:
+        return await product_services.get(uow, sku=sku)
 
     @app.get('/batches')
     async def get_all_batches(
         uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
     ) -> list[model.Batch]:
-        return await batch_services.get_all(uow)
+        return await product_services.get_all(uow)
 
     @app.post('/allocate', status_code=HTTPStatus.CREATED)
     async def allocate_endpoint(
@@ -48,9 +46,9 @@ def make_app(test_db: bool = False):
         uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
     ) -> dict[str, str]:
         try:
-            batchref = await batch_services.allocate(
+            batchref = await product_services.allocate(
                 **line.model_dump(), uow=uow)
-        except (model.OutOfStock, batch_services.InvalidSku) as e:
+        except (model.OutOfStock, product_services.InvalidSku) as e:
             raise HTTPException(HTTPStatus.BAD_REQUEST, detail=e.args[0])
         return {"batchref": batchref}
 
@@ -59,10 +57,11 @@ def make_app(test_db: bool = False):
         batch: model.Batch,
         uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
     ) -> dict[str, str]:
+        batch.allocations = list(batch.allocations)
         try:
-            await batch_services.add_batch(
+            await product_services.add_batch(
                 **batch.model_dump(), uow=uow)
-        except batch_services.OutOfStockInBatch as e:
+        except product_services.OutOfStockInBatch as e:
             raise HTTPException(HTTPStatus.BAD_REQUEST, detail=e.args[0])
         return {"status": "Ok"}
     return app
