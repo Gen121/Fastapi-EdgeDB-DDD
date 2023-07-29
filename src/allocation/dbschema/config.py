@@ -18,7 +18,3 @@ async def setup_edgedb(app, test_db: bool = False):
 async def shutdown_edgedb(app):
     client, app.state.edgedb = app.state.edgedb, None
     await client.aclose()
-
-
-if __name__ == '__main__':
-    print(settings.get_edgedb_dsn())

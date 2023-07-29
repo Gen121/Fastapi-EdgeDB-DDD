@@ -62,14 +62,14 @@ class EdgeDBRepository(AbstractRepository):
     async def add_product(self, product: model.Product):
         data = product.model_dump_json(exclude={'batches'})
         await self.client.query(
-            """with
+            """WITH
             obj := <json>$data,
             INSERT Product {
                 sku := <str>obj['sku'],
                 version_number := <int16>obj['version_number'],
             }
-            unless conflict on .sku else (
-                UPDATE Product set {
+            UNLESS CONFLICT ON .sku ELSE (
+                UPDATE Product SET {
                 sku := <str>obj['sku'],
                 version_number := <int16>obj['version_number'],
                 }
@@ -81,17 +81,17 @@ class EdgeDBRepository(AbstractRepository):
     async def add_batch(self, batch: model.Batch) -> None:
         data = batch.model_dump_json()
         await self.client.query(
-            """with
+            """WITH
             obj := <json>$data,
             list_orders := <array<json>>obj['allocations'] ?? [<json>{}],
-            new_batch := (insert Batch {
+            new_batch := (INSERT Batch {
                 reference := <str>obj['reference'],
                 sku := <str>obj['sku'],
                 eta := <cal::local_date>obj['eta'],
                 purchased_quantity := <int16>obj['purchased_quantity'],
             }
-            unless conflict on .reference else (
-                update Batch set {
+            UNLESS CONFLICT ON .reference ELSE (
+                UPDATE Batch SET {
                 reference := <str>obj['reference'],
                 sku := <str>obj['sku'],
                 eta := <cal::local_date>obj['eta'],
@@ -99,15 +99,15 @@ class EdgeDBRepository(AbstractRepository):
                 }
             )),
             for order_line in array_unpack(list_orders) union (
-                select (
-                insert OrderLine {
+                SELECT (
+                INSERT OrderLine {
                     orderid := <str>order_line['orderid'],
                     qty := <int16>order_line['qty'],
                     sku := <str>order_line['sku'],
                     allocated_in := new_batch
-                } unless conflict on .orderid else (
-                    update OrderLine
-                    set {
+                } UNLESS CONFLICT ON .orderid ELSE (
+                    UPDATE OrderLine
+                    SET {
                         orderid := <str>order_line['orderid'],
                         qty := <int16>order_line['qty'],
                         sku := <str>order_line['sku'],
@@ -116,8 +116,8 @@ class EdgeDBRepository(AbstractRepository):
                 )
                 )
             );
-            with obj := <json>$data,
-            select Batch filter .reference = <str>obj['reference'];
+            WITH obj := <json>$data,
+            SELECT Batch FILTER .reference = <str>obj['reference'];
             """,
             data=data
         )
