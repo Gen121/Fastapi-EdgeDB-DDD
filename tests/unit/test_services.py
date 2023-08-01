@@ -10,17 +10,15 @@ from allocation.services.unit_of_work import email_sender
 
 class FakeRepository(repository.AbstractRepository):
     def __init__(self, products):
+        super().__init__()
         self._products = set(products)
-        self.seen = set()
 
-    async def add(self, product):
+    async def _add(self, product: model.Product) -> None:
         self.seen.add(product)
         self._products.add(product)
 
-    async def get(self, sku) -> model.Product | None:
+    async def _get(self, sku) -> model.Product | None:
         product = next((p for p in self._products if p.sku == sku), None)
-        if product:
-            self.seen.add(product)
         return product
 
 

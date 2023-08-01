@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import abc
 
 import edgedb
@@ -10,24 +12,37 @@ class SynchronousUpdateError(Exception):
 
 
 class AbstractRepository(abc.ABC):
+    def __init__(self) -> None:
+        self.seen: set[model.Product] = set()
+
+    async def add(self, product: model.Product) -> None:
+        await self._add(product)
+        self.seen.add(product)
+
+    async def get(self, sku: str) -> model.Product | None:
+        product = await self._get(sku)
+        if product:
+            self.seen.add(product)
+        return product
+
     @abc.abstractmethod
-    async def add(self, product: model.Product):
+    async def _add(self, product: model.Product) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def get(self, sku) -> model.Product | None:
+    async def _get(self, sku) -> model.Product | None:
         raise NotImplementedError
 
-    async def list(self) -> list[model.Batch]:
+    async def list(self) -> list[model.Batch] | None:
         raise NotImplementedError
 
 
 class EdgeDBRepository(AbstractRepository):
     def __init__(self, async_client_db) -> None:
+        super().__init__()
         self.client: edgedb.AsyncIOClient = async_client_db
-        self.seen: set[model.Product] = set()
 
-    async def get(self, sku: str, allocations: bool = True):
+    async def _get(self, sku: str, allocations: bool = True) -> model.Product | None:
         """Return Product by SKU."""
         obj_ = await self.client.query_single(
             f""" SELECT Product {{
@@ -44,12 +59,9 @@ class EdgeDBRepository(AbstractRepository):
                 LIMIT 1
             """,
             sku=sku)
-        product = model.Product.model_validate(obj_) if obj_ else None
-        if product:
-            self.seen.add(product)
         return model.Product.model_validate(obj_) if obj_ else None
 
-    async def add(self, product: model.Product):
+    async def _add(self, product: model.Product) -> None:
         product_db = await self.client.query_single(
             """SELECT Product { version_number } FILTER .sku=<str>$sku""",
             sku=product.sku
