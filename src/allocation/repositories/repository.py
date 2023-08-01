@@ -11,7 +11,7 @@ class SynchronousUpdateError(Exception):
 
 class AbstractRepository(abc.ABC):
     @abc.abstractmethod
-    async def add(self, batch: model.Product):
+    async def add(self, product: model.Product):
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -25,6 +25,7 @@ class AbstractRepository(abc.ABC):
 class EdgeDBRepository(AbstractRepository):
     def __init__(self, async_client_db) -> None:
         self.client: edgedb.AsyncIOClient = async_client_db
+        self.seen: set[model.Product] = set()
 
     async def get(self, sku: str, allocations: bool = True):
         """Return Product by SKU."""
@@ -43,6 +44,9 @@ class EdgeDBRepository(AbstractRepository):
                 LIMIT 1
             """,
             sku=sku)
+        product = model.Product.model_validate(obj_) if obj_ else None
+        if product:
+            self.seen.add(product)
         return model.Product.model_validate(obj_) if obj_ else None
 
     async def add(self, product: model.Product):
@@ -52,12 +56,11 @@ class EdgeDBRepository(AbstractRepository):
         )
         if product_db and product_db.version_number >= product.version_number:
             raise SynchronousUpdateError()
-        return await self._add(product)
-
-    async def _add(self, product: model.Product) -> None:
         await self.add_product(product)
-        for batch in product.batches:
-            await self.add_batch(batch)
+        self.seen.add(product)
+        if hasattr(product, 'batches'):
+            for batch in product.batches:
+                await self.add_batch(batch)
 
     async def add_product(self, product: model.Product):
         data = product.model_dump_json(exclude={'batches'})

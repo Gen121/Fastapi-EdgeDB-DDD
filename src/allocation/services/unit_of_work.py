@@ -1,11 +1,27 @@
 # pylint: disable=attribute-defined-outside-init
+from __future__ import annotations
+
 import edgedb
 from fastapi import Depends
 
 from allocation.dbschema.config import get_edgedb_client
 from allocation.repositories import repository
+from allocation.services import messagebus
 
 
+def email_sender(cls):
+    orig_commit = cls.commit
+
+    async def commit(self):
+        for product in self.products.seen:
+            for event in product.events:
+                messagebus.handle(event)
+        return await orig_commit(self)
+    cls.commit = commit
+    return cls
+
+
+@email_sender
 class EdgedbUnitOfWork():
     products: repository.EdgeDBRepository
 

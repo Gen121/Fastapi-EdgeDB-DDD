@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 import allocation.domain.model as model
+from allocation.domain.events import Event  # noqa
 from allocation.domain.model import OutOfStock  # noqa
 
 
@@ -44,7 +45,7 @@ class Batch(BaseModel, model.Batch):
     sku: str
     eta: date | None
     purchased_quantity: int
-    allocations: set[OrderLine | None] | None = Field(default_factory=set)
+    allocations: set[OrderLine] | None = Field(default_factory=set)
 
     model_config = ConfigDict(
         from_attributes=True
@@ -64,6 +65,7 @@ class Product(BaseModel, model.Product):
     sku: str
     batches: list[Batch] | None = Field(default_factory=list)
     version_number: int
+    events: list = Field(default_factory=list, exclude=True,)
 
     model_config = ConfigDict(
         from_attributes=True,
