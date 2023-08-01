@@ -1,21 +1,30 @@
+from unittest import mock
+
 import pytest
 
 import allocation.domain.model as model
 import allocation.repositories.repository as repository
 import allocation.services.product_services as product_services
+from allocation.services.unit_of_work import email_sender
 
 
 class FakeRepository(repository.AbstractRepository):
     def __init__(self, products):
         self._products = set(products)
+        self.seen = set()
 
     async def add(self, product):
+        self.seen.add(product)
         self._products.add(product)
 
     async def get(self, sku) -> model.Product | None:
-        return next((p for p in self._products if p.sku == sku), None)
+        product = next((p for p in self._products if p.sku == sku), None)
+        if product:
+            self.seen.add(product)
+        return product
 
 
+@email_sender
 class FakeUnitOfWork():
     def __init__(self):
         self.products = FakeRepository([])
@@ -70,3 +79,18 @@ async def test_allocate_errors_for_invalid_sku():
     except product_services.InvalidSku as e:
         with pytest.raises(product_services.InvalidSku, match="Invalid sku NONEXISTENTSKU"):
             raise e
+
+
+async def test_sends_email_on_out_of_stock_error():
+    uow = FakeUnitOfWork()
+    await product_services.add_batch(
+        uow=uow, reference="b1", sku="POPULAR-CURTAINS",
+        purchased_quantity=9, eta=None, allocations=set()
+    )
+
+    with mock.patch("allocation.adapters.email.send_mail") as mock_send_mail:
+        await product_services.allocate("o1", "POPULAR-CURTAINS", 10, uow)
+        assert mock_send_mail.call_args == mock.call(
+            "stock@made.com",
+            f"Out of stock for POPULAR-CURTAINS",
+        )
