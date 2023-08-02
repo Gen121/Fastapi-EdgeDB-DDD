@@ -1,7 +1,7 @@
 from typing import Callable
 
-from allocation.adapters import email
 from allocation.domain import events
+from . import handlers
 
 
 def handle(event: events.Event):
@@ -9,13 +9,8 @@ def handle(event: events.Event):
         handler(event)
 
 
-def send_out_of_stock_notification(event: events.OutOfStock):
-    email.send_mail(
-        "stock@made.com",
-        f"Out of stock for {event.sku}",
-    )
-
-
 HANDLERS: dict[type[events.Event], list[Callable]] = {
-    events.OutOfStock: [send_out_of_stock_notification],
+    events.OutOfStock: [handlers.send_out_of_stock_notification],
+    events.BatchCreated: [handlers.add_batch],
+    events.AllocationRequired: [handlers.allocate],
 }
