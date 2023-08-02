@@ -7,7 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 import allocation.domain.model as model
 from allocation.domain.events import Event  # noqa
-from allocation.domain.model import OutOfStock  # noqa
 
 
 class OrderLine(BaseModel, model.OrderLine):

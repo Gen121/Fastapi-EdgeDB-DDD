@@ -5,7 +5,7 @@ import pytest
 import allocation.domain.model as model
 import allocation.repositories.repository as repository
 import allocation.services.product_services as product_services
-from allocation.services.unit_of_work import email_sender
+from allocation.services.unit_of_work import AbstractUnitOfWork, email_sender
 
 
 class FakeRepository(repository.AbstractRepository):
@@ -23,7 +23,7 @@ class FakeRepository(repository.AbstractRepository):
 
 
 @email_sender
-class FakeUnitOfWork():
+class FakeUnitOfWork(AbstractUnitOfWork):
     def __init__(self):
         self.products = FakeRepository([])
         self.committed = False
@@ -90,5 +90,5 @@ async def test_sends_email_on_out_of_stock_error():
         await product_services.allocate("o1", "POPULAR-CURTAINS", 10, uow)
         assert mock_send_mail.call_args == mock.call(
             "stock@made.com",
-            f"Out of stock for POPULAR-CURTAINS",
+            "Out of stock for POPULAR-CURTAINS",
         )

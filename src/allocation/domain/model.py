@@ -7,10 +7,6 @@ from typing import Optional, Set
 from . import events
 
 
-class OutOfStock(Exception):
-    pass
-
-
 @dataclass(unsafe_hash=True)
 class OrderLine:
     orderid: str

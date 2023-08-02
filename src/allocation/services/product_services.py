@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Sized
 
 from allocation.adapters.pyd_model import Batch, OrderLine, Product
 from allocation.services import unit_of_work
@@ -19,13 +20,14 @@ async def allocate_in_current_batch(
     to_allocate = [OrderLine(**orderline) for orderline in orrderlines]
     for orderline in to_allocate:
         batch.allocate(orderline)
-    if len(batch.allocations) < len(to_allocate):
-        raise OutOfStockInBatch(
-            "There is not enough stock for the {line.sku} article in this batch")
+    if isinstance(batch.allocations, Sized):
+        if len(batch.allocations) < len(to_allocate):
+            raise OutOfStockInBatch(
+                "There is not enough stock for the {line.sku} article in this batch")
 
 
 async def get(
-    uow: unit_of_work.EdgedbUnitOfWork,
+    uow: unit_of_work.AbstractUnitOfWork,
     sku: str,
 ) -> Product | None:
     async with uow:
@@ -35,8 +37,8 @@ async def get(
 
 
 async def get_all(
-        uow: unit_of_work.EdgedbUnitOfWork,
-) -> list[Batch]:
+        uow: unit_of_work.AbstractUnitOfWork,
+) -> list[Batch] | None:
     async with uow:
         res = await uow.products.list()
         await uow.commit()
@@ -44,7 +46,7 @@ async def get_all(
 
 
 async def add_batch(
-    uow: unit_of_work.EdgedbUnitOfWork,
+    uow: unit_of_work.AbstractUnitOfWork,
     reference: str, sku: str, purchased_quantity: int, eta: date | None,
     allocations: set[dict] | None,
 ) -> None:
@@ -64,8 +66,8 @@ async def add_batch(
 
 async def allocate(
     orderid: str, sku: str, qty: int,
-    uow: unit_of_work.EdgedbUnitOfWork,
-) -> str:
+    uow: unit_of_work.AbstractUnitOfWork,
+) -> str | None:
     line = OrderLine(orderid=orderid, sku=sku, qty=qty)
     async with uow:
         product = await uow.products.get(sku)

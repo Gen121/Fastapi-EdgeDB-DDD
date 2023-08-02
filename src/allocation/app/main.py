@@ -31,7 +31,7 @@ def make_app(test_db: bool = False):
     async def get_product(
         sku: str,
         uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
-    ) -> model.Product:
+    ) -> model.Product | None:
         return await product_services.get(uow, sku=sku)
 
     @app.get('/batches')
@@ -48,7 +48,7 @@ def make_app(test_db: bool = False):
         try:
             batchref = await product_services.allocate(
                 **line.model_dump(), uow=uow)
-        except (model.OutOfStock, product_services.InvalidSku) as e:
+        except product_services.InvalidSku as e:
             raise HTTPException(HTTPStatus.BAD_REQUEST, detail=e.args[0])
         return {"batchref": batchref}
 
@@ -57,7 +57,8 @@ def make_app(test_db: bool = False):
         batch: model.Batch,
         uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
     ) -> dict[str, str]:
-        batch.allocations = list(batch.allocations)
+        if batch.allocations:
+            batch.allocations = list(batch.allocations)
         try:
             await product_services.add_batch(
                 **batch.model_dump(), uow=uow)

@@ -1,5 +1,6 @@
 # pylint: disable=attribute-defined-outside-init
 from __future__ import annotations
+import abc
 
 import edgedb
 from fastapi import Depends
@@ -21,8 +22,24 @@ def email_sender(cls):
     return cls
 
 
+class AbstractUnitOfWork(abc.ABC):
+    products: repository.AbstractRepository
+
+    @abc.abstractmethod
+    async def __aenter__(self):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def __aexit__(self, extype, ex, tb):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def commit(self):
+        raise NotImplementedError
+
+
 @email_sender
-class EdgedbUnitOfWork():
+class EdgedbUnitOfWork(AbstractUnitOfWork):
     products: repository.EdgeDBRepository
 
     def __init__(self, async_client) -> None:

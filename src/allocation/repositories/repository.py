@@ -71,8 +71,9 @@ class EdgeDBRepository(AbstractRepository):
         await self.add_product(product)
         self.seen.add(product)
         if hasattr(product, 'batches'):
-            for batch in product.batches:
-                await self.add_batch(batch)
+            if product.batches is not None:
+                for batch in product.batches:
+                    await self.add_batch(batch)
 
     async def add_product(self, product: model.Product):
         data = product.model_dump_json(exclude={'batches'})
