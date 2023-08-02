@@ -6,7 +6,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from allocation.adapters import pyd_model as model
 from allocation.dbschema.config import setup_edgedb, shutdown_edgedb
-from allocation.services import product_services, unit_of_work
+from allocation.services import handlers, unit_of_work
 
 
 def make_app(test_db: bool = False):
@@ -32,13 +32,13 @@ def make_app(test_db: bool = False):
         sku: str,
         uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
     ) -> model.Product | None:
-        return await product_services.get(uow, sku=sku)
+        return await handlers.get(uow, sku=sku)
 
     @app.get('/batches')
     async def get_all_batches(
         uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
     ) -> list[model.Batch]:
-        return await product_services.get_all(uow)
+        return await handlers.get_all(uow)
 
     @app.post('/allocate', status_code=HTTPStatus.CREATED)
     async def allocate_endpoint(
@@ -46,9 +46,9 @@ def make_app(test_db: bool = False):
         uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
     ) -> dict[str, str]:
         try:
-            batchref = await product_services.allocate(
+            batchref = await handlers.allocate(
                 **line.model_dump(), uow=uow)
-        except product_services.InvalidSku as e:
+        except handlers.InvalidSku as e:
             raise HTTPException(HTTPStatus.BAD_REQUEST, detail=e.args[0])
         return {"batchref": batchref}
 
@@ -60,9 +60,9 @@ def make_app(test_db: bool = False):
         if batch.allocations:
             batch.allocations = list(batch.allocations)
         try:
-            await product_services.add_batch(
+            await handlers.add_batch(
                 **batch.model_dump(), uow=uow)
-        except product_services.OutOfStockInBatch as e:
+        except handlers.OutOfStockInBatch as e:
             raise HTTPException(HTTPStatus.BAD_REQUEST, detail=e.args[0])
         return {"status": "Ok"}
     return app
