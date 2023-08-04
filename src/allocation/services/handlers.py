@@ -74,7 +74,7 @@ async def send_out_of_stock_notification(
     event: events.OutOfStock,
     uow: unit_of_work.AbstractUnitOfWork,
 ):
-    send(
+    await send(
         "stock@made.com",
         f"Out of stock for {event.sku}",
     )
