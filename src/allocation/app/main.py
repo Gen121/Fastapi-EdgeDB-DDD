@@ -4,9 +4,9 @@ from http import HTTPStatus
 from fastapi import Depends, FastAPI, HTTPException
 from starlette.middleware.cors import CORSMiddleware
 
-from allocation.adapters import pyd_model as model
+from allocation.domain import events
 from allocation.dbschema.config import setup_edgedb, shutdown_edgedb
-from allocation.services import handlers, unit_of_work
+from allocation.services import unit_of_work, messagebus, handlers
 
 
 def make_app(test_db: bool = False):
@@ -27,44 +27,29 @@ def make_app(test_db: bool = False):
     async def health_check() -> dict[str, str]:
         return {"status": "Ok"}
 
-    @app.get('/product')
-    async def get_product(
-        sku: str,
+    @app.post("/add_batch", status_code=HTTPStatus.CREATED)
+    async def add_batch(
+        batch: events.BatchCreated,
         uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
-    ) -> model.Product | None:
-        return await handlers.get(uow, sku=sku)
+    ) -> dict[str, str]:
 
-    @app.get('/batches')
-    async def get_all_batches(
-        uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
-    ) -> list[model.Batch]:
-        return await handlers.get_all(uow)
+        # if batch.eta is not None:
+        #     batch.eta = datetime.datetime.fromisoformat(batch.eta).date()
+
+        await messagebus.handle(batch, uow=uow)
+        return {"status": "Ok"}
 
     @app.post('/allocate', status_code=HTTPStatus.CREATED)
     async def allocate_endpoint(
-        line: model.OrderLine,
+        line: events.AllocationRequired,
         uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
     ) -> dict[str, str]:
         try:
-            batchref = await handlers.allocate(
-                **line.model_dump(), uow=uow)
+            batchref = await messagebus.handle(line, uow=uow)
         except handlers.InvalidSku as e:
             raise HTTPException(HTTPStatus.BAD_REQUEST, detail=e.args[0])
-        return {"batchref": batchref}
+        return {"batchref": batchref[0]}
 
-    @app.post("/add_batch", status_code=HTTPStatus.CREATED)
-    async def add_batch(
-        batch: model.Batch,
-        uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
-    ) -> dict[str, str]:
-        if batch.allocations:
-            batch.allocations = list(batch.allocations)
-        try:
-            await handlers.add_batch(
-                **batch.model_dump(), uow=uow)
-        except handlers.OutOfStockInBatch as e:
-            raise HTTPException(HTTPStatus.BAD_REQUEST, detail=e.args[0])
-        return {"status": "Ok"}
     return app
 
 

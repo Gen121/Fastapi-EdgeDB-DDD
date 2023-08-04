@@ -1,15 +1,30 @@
-from typing import Callable
+from typing import Any, Awaitable, Callable
 
 from allocation.domain import events
-from . import handlers
+from . import handlers, unit_of_work
+
+AsyncEventHandler = Callable[..., Awaitable[Any | None]]
 
 
-def handle(event: events.Event):
-    for handler in HANDLERS[type(event)]:
-        handler(event)
+async def handle(
+    event: events.Event,
+    uow: unit_of_work.AbstractUnitOfWork,
+):
+    queue = [event]
+    results = []
+    while queue:
+        print(queue)
+        event = queue.pop(0)
+        for handler in HANDLERS[type(event)]:
+            results.append(await handler(event=event, uow=uow))
+            list_of_event = []
+            async for event in uow.collect_new_events():
+                list_of_event.append(event)
+            queue.extend(list_of_event)
+    return results
 
 
-HANDLERS: dict[type[events.Event], list[Callable]] = {
+HANDLERS: dict[type[events.Event], list[AsyncEventHandler]] = {
     events.OutOfStock: [handlers.send_out_of_stock_notification],
     events.BatchCreated: [handlers.add_batch],
     events.AllocationRequired: [handlers.allocate],

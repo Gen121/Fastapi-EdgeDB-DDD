@@ -16,9 +16,9 @@ async def test_health_check(async_test_client):
 async def post_to_add_batch(async_test_client, ref, sku, qty, eta):
     r = await async_test_client.post(
         f"{API_URL}/add_batch", json={
-            "reference": ref,
+            "ref": ref,  # reference
             "sku": sku,
-            "purchased_quantity": qty,
+            "qty": qty,  # purchased_quantity
             "eta": eta
         }
     )
