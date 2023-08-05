@@ -70,6 +70,16 @@ async def allocate(
     return batchref
 
 
+async def change_batch_quantity(
+    event: events.BatchQuantityChanged,
+    uow: unit_of_work.AbstractUnitOfWork,
+):
+    async with uow:
+        product = await uow.products.get_by_batchref(batchref=event.ref)
+        product.change_batch_quantity(ref=event.ref, qty=event.qty)
+        await uow.commit()
+
+
 async def send_out_of_stock_notification(
     event: events.OutOfStock,
     uow: unit_of_work.AbstractUnitOfWork,

@@ -20,7 +20,13 @@ class AbstractRepository(abc.ABC):
         self.seen.add(product)
 
     async def get(self, sku: str) -> model.Product | None:
-        product = await self._get(sku)
+        product = await self._get(sku=sku)
+        if product:
+            self.seen.add(product)
+        return product
+
+    async def get_by_batchref(self, batchref: str) -> model.Product | None:
+        product = await self._get_by_batchref(batchref=batchref)
         if product:
             self.seen.add(product)
         return product
@@ -30,7 +36,11 @@ class AbstractRepository(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def _get(self, sku) -> model.Product | None:
+    async def _get(self, *args, **kwargs) -> model.Product | None:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def _get_by_batchref(self, *args, **kwargs) -> model.Product | None:
         raise NotImplementedError
 
     async def list(self) -> list[model.Batch] | None:
@@ -42,7 +52,9 @@ class EdgeDBRepository(AbstractRepository):
         super().__init__()
         self.client: edgedb.AsyncIOClient = async_client_db
 
-    async def _get(self, sku: str, allocations: bool = True) -> model.Product | None:
+    async def _get(
+        self, sku: str | None = None, batchref: str | None = None, allocations: bool = True
+    ) -> model.Product | None:
         """Return Product by SKU."""
         obj_ = await self.client.query_single(
             f""" SELECT Product {{
@@ -55,28 +67,34 @@ class EdgeDBRepository(AbstractRepository):
                       {"allocations: { orderid, sku, qty }" if allocations else ""}
                   }}
                 }}
-                FILTER .sku = <str>$sku
+                FILTER .sku ?= <optional str>$sku
+                OR .batches.reference ?= <optional str>$reference
                 LIMIT 1
+
             """,
-            sku=sku)
+            sku=sku,
+            reference=batchref,
+        )
         return model.Product.model_validate(obj_) if obj_ else None
+
+    async def _get_by_batchref(self, batchref: str | None) -> model.Product | None:
+        return await self._get(batchref=batchref)
 
     async def _add(self, product: model.Product) -> None:
         product_db = await self.client.query_single(
-            """SELECT Product { version_number } FILTER .sku=<str>$sku""",
-            sku=product.sku
+            """SELECT Product { version_number } FILTER .sku=<str>$sku""", sku=product.sku
         )
         if product_db and product_db.version_number >= product.version_number:
             raise SynchronousUpdateError()
         await self.add_product(product)
         self.seen.add(product)
-        if hasattr(product, 'batches'):
+        if hasattr(product, "batches"):
             if product.batches is not None:
                 for batch in product.batches:
                     await self.add_batch(batch)
 
     async def add_product(self, product: model.Product):
-        data = product.model_dump_json(exclude={'batches'})
+        data = product.model_dump_json(exclude={"batches"})
         await self.client.query(
             """WITH
             obj := <json>$data,
@@ -91,7 +109,7 @@ class EdgeDBRepository(AbstractRepository):
                 }
             )
             """,
-            data=data
+            data=data,
         )
 
     async def add_batch(self, batch: model.Batch) -> None:
@@ -135,11 +153,9 @@ class EdgeDBRepository(AbstractRepository):
             WITH obj := <json>$data,
             SELECT Batch FILTER .reference = <str>obj['reference'];
             """,
-            data=data
+            data=data,
         )
 
     async def list(self) -> list[model.Batch]:
-        objects = await self.client.query(
-            """SELECT Batch {**}"""
-        )
+        objects = await self.client.query("""SELECT Batch {**}""")
         return [model.Batch.model_validate(obj) for obj in objects]
