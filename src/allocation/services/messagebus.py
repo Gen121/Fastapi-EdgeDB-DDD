@@ -1,9 +1,23 @@
+import abc
 from typing import Any, Awaitable, Callable
 
 from allocation.domain import events
 from . import handlers, unit_of_work
 
 AsyncEventHandler = Callable[..., Awaitable[Any | None]]
+
+
+class AbstractMessageBus(abc.ABC):
+    HANDLERS: dict[type[events.Event], list[AsyncEventHandler]]
+    results: list = []
+
+    async def handle(self, event: events.Event):
+        for handler in self.HANDLERS[type(event)]:
+            self.results.append(await handler(event=event, uow=uow))
+            list_of_event = []
+            async for event in uow.collect_new_events():
+                list_of_event.append(event)
+            queue.extend(list_of_event)
 
 
 async def handle(

@@ -44,6 +44,17 @@ class FakeUnitOfWork(unit_of_work.AbstractUnitOfWork):
         pass
 
 
+class FakeUnitOfWorkWithFakeMessageBus(FakeUnitOfWork):
+    def __init__(self):
+        super().__init__()
+        self.events_published: list[events.Event] = []
+
+    async def publish_events(self):
+        for product in self.products.seen:
+            while product.events:
+                self.events_published.append(product.events.pop(0))
+
+
 class TestAddBatch:
     async def test_add_batch(self):
         uow = FakeUnitOfWork()
@@ -92,9 +103,7 @@ class TestAllocate:
 class TestChangeBatchQuantity:
     async def test_changes_available_quantity(self):
         uow = FakeUnitOfWork()
-        await messagebus.handle(
-            events.BatchCreated("batch1", "ADORABLE-SETTEE", 100, None), uow
-        )
+        await messagebus.handle(events.BatchCreated("batch1", "ADORABLE-SETTEE", 100, None), uow)
         product = await uow.products.get(sku="ADORABLE-SETTEE")
         [batch] = product.batches
         assert batch.available_quantity == 100
