@@ -24,7 +24,7 @@ async def get_allocated_batch_ref(async_client_db, orderid, sku):
 
 
 async def test_uow_can_retrieve_a_batch_and_allocate_to_it(async_client_db, random_batchref, random_sku, random_orderid):
-    batchref_expected, sku, order_id = random_batchref, f"HIPSTER-WORKBENCH-{random_sku}", random_orderid
+    batchref_expected, sku, order_id = random_batchref(), f"HIPSTER-WORKBENCH-{random_sku()}", random_orderid()
     await insert_batch(async_client_db, batchref_expected, sku, 100, datetime.date(2011, 1, 2))
 
     uow = unit_of_work.EdgedbUnitOfWork(async_client_db)
@@ -42,7 +42,7 @@ async def test_uow_can_retrieve_a_batch_and_allocate_to_it(async_client_db, rand
 
 
 async def test_rolls_back_uncommitted_work_by_default(async_client_db, random_sku):
-    sku_expected = f"rolls_back_uncommitted_work_by_default_{random_sku}"
+    sku_expected = f"rolls_back_uncommitted_work_by_default_{random_sku()}"
     uow = unit_of_work.EdgedbUnitOfWork(async_client_db)
     product = model.Product(sku=sku_expected, version_number=1, batches=[])
     async with uow:
@@ -56,7 +56,7 @@ async def test_rolls_back_on_error(async_client_db, random_sku):
     class MyException(Exception):
         pass
 
-    sku_expected = f"rolls_back_on_error_{random_sku}"
+    sku_expected = f"rolls_back_on_error_{random_sku()}"
     uow = unit_of_work.EdgedbUnitOfWork(async_client_db)
     product = model.Product(sku=sku_expected, version_number=1, batches=[])
     try:
@@ -90,9 +90,9 @@ async def test_rolls_back_on_error(async_client_db, random_sku):
 # async def test_concurrent_updates_to_version_are_not_allowed(
 #     random_sku, random_batchref, async_client_db, random_orderid
 # ) -> None:
-#     sku, batch = f"concurrent_updates_{random_sku}", f"concurrent_updates_{random_batchref}"
+#     sku, batch = f"concurrent_updates_{random_sku()}", f"concurrent_updates_{random_batchref()}"
 #     await insert_batch(async_client_db, batch, sku, 100, datetime.date(2011, 1, 2), 1)
-#     order1, order2 = random_orderid, random_orderid + '_2'
+#     order1, order2 = random_orderid(), random_orderid('_2')
 #     exceptions: list[Exception] = []
 
 #     await asyncio.gather(

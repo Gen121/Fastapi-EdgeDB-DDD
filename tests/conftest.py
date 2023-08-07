@@ -15,7 +15,7 @@ from allocation.app.settings import settings
 
 async def wait_for_edgedb_to_come_up(async_client_db: edgedb.AsyncIOClient):
     deadline = time.time() + 10
-    message = ''
+    message = ""
     while time.time() < deadline:
         try:
             await async_client_db.ensure_connected()
@@ -29,10 +29,7 @@ async def wait_for_edgedb_to_come_up(async_client_db: edgedb.AsyncIOClient):
 
 @pytest.fixture
 async def async_client_db() -> edgedb.AsyncIOClient:
-    async_client_db = edgedb.create_async_client(
-        settings.get_edgedb_dsn(test_db=True),
-        tls_security='insecure'
-    )
+    async_client_db = edgedb.create_async_client(settings.get_edgedb_dsn(test_db=True), tls_security="insecure")
     await wait_for_edgedb_to_come_up(async_client_db)
     return async_client_db
 
@@ -63,8 +60,7 @@ def tx_test_client(mocker):
 
 async def tx_setup_edgedb(app):
     client = app.state.edgedb_client = edgedb.create_async_client(
-        settings.get_edgedb_dsn(test_db=True),
-        tls_security='insecure'
+        settings.get_edgedb_dsn(test_db=True), tls_security="insecure"
     )
     await client.ensure_connected()
     async for tx in client.with_retry_options(edgedb.RetryOptions(0)).transaction():
@@ -105,15 +101,24 @@ def random_suffix() -> str:
 
 
 @pytest.fixture
-def random_sku(name: str | int = "") -> str:
-    return f"sku-{name}-{random_suffix()}"
+def random_sku():
+    def _random_sku(name: str | int = "") -> str:
+        return f"sku-{name}-{random_suffix()}"
+
+    return _random_sku
 
 
 @pytest.fixture
-def random_batchref(name: str | int = "") -> str:
-    return f"batch-{name}-{random_suffix()}"
+def random_batchref():
+    def _random_batchref(name: str | int = "") -> str:
+        return f"batch-{name}-{random_suffix()}"
+
+    return _random_batchref
 
 
 @pytest.fixture
-def random_orderid(name: str | int = "") -> str:
-    return f"order-{name}-{random_suffix()}"
+def random_orderid():
+    def _random_orderid(name: str | int = "") -> str:
+        return f"order-{name}-{random_suffix()}"
+
+    return _random_orderid

@@ -10,8 +10,8 @@ from .utils import (add_allocateion_to_batch_by_ids, get_allocations,
 
 async def test_repository_can_save_a_batch(async_client_db, random_batchref, random_sku):
     repo = repository.EdgeDBRepository(async_client_db)
-    bath_ref = f'repository_can_save_{random_batchref}'
-    sku = f'repository_can_save_{random_sku}'
+    bath_ref = f'repository_can_save_{random_batchref()}'
+    sku = f'repository_can_save_{random_sku()}'
     batch = Batch(reference=bath_ref, sku=sku,
                   purchased_quantity=100, eta=datetime.date(2011, 1, 2))
     product = Product(sku=sku, batches=[batch], version_number=1)
@@ -31,13 +31,13 @@ async def test_repository_can_save_a_batch(async_client_db, random_batchref, ran
 
 async def test_repository_can_retrieve_a_batch_with_allocations(async_client_db, random_batchref, random_orderid, random_sku):
     repo = repository.EdgeDBRepository(async_client_db)
-    orderid = f'can_retrieve_a_batch_with_allocation_{random_orderid}'
-    sku = f"can_retrieve_a_batch_with_allocations{random_sku}"
-    bath_ref = f"can_retrieve_a_batch_with_{random_batchref}"
+    orderid = f'can_retrieve_a_batch_with_allocation_{random_orderid()}'
+    sku = f"can_retrieve_a_batch_with_allocations{random_sku()}"
+    bath_ref = f"can_retrieve_a_batch_with_{random_batchref()}"
 
     orderline_id = await insert_order_line(async_client_db, orderid, sku, 10)
     batch1_id = await insert_batch(async_client_db, bath_ref, sku)
-    await insert_batch(async_client_db, f"inserted_{random_batchref}", sku)
+    await insert_batch(async_client_db, f"inserted_{random_batchref()}", sku)
     await add_allocateion_to_batch_by_ids(async_client_db, orderline_id, batch1_id)
 
     product = await repo.get(sku=sku)  # , allocations=True
@@ -54,9 +54,9 @@ async def test_repository_can_retrieve_a_batch_with_allocations(async_client_db,
 
 async def test_repository_updating_a_batch(async_client_db, random_orderid, random_batchref, random_sku):
     repo = repository.EdgeDBRepository(async_client_db)
-    orderid = f"updating_a_batch_{random_orderid}"
-    sku = f"updating_a_batch_{random_sku}"
-    batch_ref = f"updating_a_batch_{random_batchref}"
+    orderid = f"updating_a_batch_{random_orderid()}"
+    sku = f"updating_a_batch_{random_sku()}"
+    batch_ref = f"updating_a_batch_{random_batchref()}"
 
     order1 = OrderLine(orderid=orderid, sku=sku, qty=10)
     order2 = OrderLine(orderid=orderid + "_2", sku=sku, qty=20)
