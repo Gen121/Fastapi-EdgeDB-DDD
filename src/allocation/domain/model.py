@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Optional, Set
 
-from . import events
+from . import commands, events
 
 
 @dataclass(unsafe_hash=True)
@@ -44,7 +44,10 @@ class Batch:
         if self.can_allocate(line):
             self.allocations.add(line)
 
-    def deallocate_one(self):
+    def deallocate_one(self, line: OrderLine | None = None):
+        if line and line in self.allocations:
+            self.allocations.remove(line)
+            return None
         return self.allocations.pop()
 
     @property
@@ -64,7 +67,7 @@ class Product:
         self.sku = sku
         self.batches = batches
         self.version_number = version_number
-        self.events: list[events.Event] = []
+        self.events: list[events.Event | commands.Command] = []
 
     def allocate(self, line: OrderLine) -> str | None:
         try:
@@ -89,5 +92,5 @@ class Product:
         while batch.available_quantity < 0:
             line = batch.deallocate_one()
             self.events.append(
-                events.AllocationRequired(line.orderid, line.sku, line.qty)
+                commands.Allocate(line.orderid, line.sku, line.qty)
             )

@@ -2,7 +2,7 @@ from typing import Sized
 
 from allocation.adapters.email import send
 from allocation.adapters.pyd_model import Batch, OrderLine, Product
-from allocation.domain import events
+from allocation.domain import commands, events
 from allocation.services import unit_of_work
 
 
@@ -43,23 +43,23 @@ async def get_all(
 
 
 async def add_batch(
-    event: events.BatchCreated,
+    cmd: commands.CreateBatch,
     uow: unit_of_work.AbstractUnitOfWork,
 ) -> None:
     async with uow:
-        product = await uow.products.get(event.sku)
+        product = await uow.products.get(cmd.sku)
         if not product:
-            product = Product(sku=event.sku, version_number=0, batches=[])
-        product.add_batch(Batch(reference=event.ref, sku=event.sku, purchased_quantity=event.qty, eta=event.eta))
+            product = Product(sku=cmd.sku, version_number=0, batches=[])
+        product.add_batch(Batch(reference=cmd.ref, sku=cmd.sku, purchased_quantity=cmd.qty, eta=cmd.eta))
         await uow.products.add(product)
         await uow.commit()
 
 
 async def allocate(
-    event: events.AllocationRequired,
+    cmd: commands.Allocate,
     uow: unit_of_work.AbstractUnitOfWork,
 ) -> str | None:
-    line = OrderLine(orderid=event.orderid, sku=event.sku, qty=event.qty)
+    line = OrderLine(orderid=cmd.orderid, sku=cmd.sku, qty=cmd.qty)
     async with uow:
         product = await uow.products.get(line.sku)
         if not product:
@@ -71,12 +71,12 @@ async def allocate(
 
 
 async def change_batch_quantity(
-    event: events.BatchQuantityChanged,
+    cmd: commands.ChangeBatchQuantity,
     uow: unit_of_work.AbstractUnitOfWork,
 ):
     async with uow:
-        product = await uow.products.get_by_batchref(batchref=event.ref)
-        product.change_batch_quantity(ref=event.ref, qty=event.qty)
+        product = await uow.products.get_by_batchref(batchref=cmd.ref)
+        product.change_batch_quantity(ref=cmd.ref, qty=cmd.qty)
         await uow.commit()
 
 
