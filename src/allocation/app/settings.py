@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     db_name: str
     db_test_name: str
 
+    redis_host: str
+    redis_port: int
+
     api_host: str
     api_port: int
 
@@ -28,6 +31,9 @@ class Settings(BaseSettings):
 
     def get_api_url(self) -> str:
         return f"http://{self.api_host}:{self.api_port}"
+
+    def get_redis_host_and_port(self):
+        return dict(host=self.redis_host, port=self.redis_port)
 
 
 @cache

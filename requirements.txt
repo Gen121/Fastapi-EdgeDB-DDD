@@ -3,6 +3,7 @@ edgedb
 fastapi[all]
 pydantic-settings
 uvicorn[standard]
+redis
 
 # dev/tests
 pytest
@@ -13,3 +14,4 @@ mypy
 requests
 isort
 flake8
+tenacity

@@ -1,4 +1,7 @@
 # pytest: disable=redefined-outer-name
+import asyncio
+import shutil
+import subprocess
 import time
 import uuid
 from http import HTTPStatus
@@ -6,25 +9,14 @@ from pathlib import Path
 
 import edgedb
 import pytest
+import redis
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
+from redis.exceptions import RedisError
+from requests.exceptions import RequestException
 
 from allocation.app.main import make_app
 from allocation.app.settings import settings
-
-
-async def wait_for_edgedb_to_come_up(async_client_db: edgedb.AsyncIOClient):
-    deadline = time.time() + 10
-    message = ""
-    while time.time() < deadline:
-        try:
-            await async_client_db.ensure_connected()
-        except Exception as e:
-            message = str(e)
-            time.sleep(0.5)
-        else:
-            return
-    pytest.exit(f"Edgedb never came up: {message}", returncode=1)
 
 
 @pytest.fixture
@@ -76,17 +68,42 @@ async def tx_shutdown_edgedb(app):
     await client.aclose()
 
 
+async def wait_for_edgedb_to_come_up(async_client_db: edgedb.AsyncIOClient):
+    deadline = time.time() + 10
+    message = ""
+    while time.time() < deadline:
+        try:
+            await async_client_db.ensure_connected()
+        except Exception as e:
+            message = str(e)
+            time.sleep(0.5)
+        else:
+            return
+    pytest.exit(f"Edgedb never came up: {message}", returncode=1)
+
+
 async def wait_for_webapp_to_come_up(async_test_client: AsyncClient):
     deadline = time.time() + 10
     while time.time() < deadline:
         try:
             response = await async_test_client.get("/health_check")
             assert response.status_code == HTTPStatus.OK
-        except Exception:
+        except RequestException:
             time.sleep(0.5)
         else:
             return
     pytest.exit("API never came up", returncode=1)
+
+
+async def wait_for_redis_to_come_up():
+    deadline = time.time() + 5
+    r = redis.Redis(**settings.get_redis_host_and_port())
+    while time.time() < deadline:
+        try:
+            return r.ping()
+        except RedisError:
+            await asyncio.sleep(0.5)
+    pytest.fail("Redis never came up")
 
 
 @pytest.fixture
@@ -94,6 +111,18 @@ async def restart_api(async_test_client):
     (Path(__file__).parent.parent / "src" / "allocation" / "app" / "main.py").touch()
     time.sleep(0.5)
     await wait_for_webapp_to_come_up(async_test_client)
+
+
+@pytest.fixture
+async def restart_redis_pubsub():
+    await wait_for_redis_to_come_up()
+    if not shutil.which("docker-compose"):
+        print("skipping restart, assumes running in container")
+        return
+    subprocess.run(
+        ["docker-compose", "restart", "-t", "0", "redis_pubsub"],
+        check=True,
+    )
 
 
 def random_suffix() -> str:

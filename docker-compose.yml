@@ -6,6 +6,7 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - edgedb
+      - redis
     environment:
       - PYTHONDONTWRITEBYTECODE=1
     volumes:
@@ -34,5 +35,11 @@ services:
         interval: 3s
         timeout: 1s
         retries: 10
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "63791:6379"
+
 volumes:
   edgedb_data:
