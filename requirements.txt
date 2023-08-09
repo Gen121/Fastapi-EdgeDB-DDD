@@ -4,6 +4,7 @@ fastapi[all]
 pydantic-settings
 uvicorn[standard]
 redis
+types-redis
 
 # dev/tests
 pytest

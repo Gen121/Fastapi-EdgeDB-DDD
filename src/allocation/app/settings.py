@@ -32,8 +32,8 @@ class Settings(BaseSettings):
     def get_api_url(self) -> str:
         return f"http://{self.api_host}:{self.api_port}"
 
-    def get_redis_host_and_port(self):
-        return dict(host=self.redis_host, port=self.redis_port)
+    def get_redis_uri(self) -> str:
+        return f"redis://{self.redis_host}:{self.redis_port}"
 
 
 @cache

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import edgedb
 import pytest
-import redis
+import redis.asyncio as redis
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from redis.exceptions import RedisError
@@ -97,10 +97,11 @@ async def wait_for_webapp_to_come_up(async_test_client: AsyncClient):
 
 async def wait_for_redis_to_come_up():
     deadline = time.time() + 5
-    r = redis.Redis(**settings.get_redis_host_and_port())
+    r = await redis.from_url(settings.get_redis_uri())
     while time.time() < deadline:
         try:
-            return r.ping()
+            attempt = await r.ping()
+            return attempt
         except RedisError:
             await asyncio.sleep(0.5)
     pytest.fail("Redis never came up")
@@ -116,11 +117,11 @@ async def restart_api(async_test_client):
 @pytest.fixture
 async def restart_redis_pubsub():
     await wait_for_redis_to_come_up()
-    if not shutil.which("docker-compose"):
+    if not shutil.which("docker compose"):
         print("skipping restart, assumes running in container")
         return
     subprocess.run(
-        ["docker-compose", "restart", "-t", "0", "redis_pubsub"],
+        ["docker", "compose", "restart", "-t", "0", "redis_pubsub"],
         check=True,
     )
 
