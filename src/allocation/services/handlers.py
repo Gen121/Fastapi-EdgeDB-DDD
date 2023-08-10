@@ -1,6 +1,6 @@
 from typing import Sized
 
-from allocation.adapters.email import send
+from allocation.adapters import redis_eventpublisher, email
 from allocation.adapters.pyd_model import Batch, OrderLine, Product
 from allocation.domain import commands, events
 from allocation.services import unit_of_work
@@ -84,7 +84,14 @@ async def send_out_of_stock_notification(
     event: events.OutOfStock,
     uow: unit_of_work.AbstractUnitOfWork,
 ):
-    await send(
+    await email.send(
         "stock@made.com",
         f"Out of stock for {event.sku}",
     )
+
+
+async def publish_allocated_event(
+    event: events.Allocated,
+    uow: unit_of_work.AbstractUnitOfWork,
+):
+    await redis_eventpublisher.publish("line_allocated", event)

@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     def get_api_url(self) -> str:
         return f"http://{self.api_host}:{self.api_port}"
 
-    def get_redis_uri(self) -> str:
+    def get_redis_url(self) -> str:
         return f"redis://{self.redis_host}:{self.redis_port}"
 
 
