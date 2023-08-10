@@ -3,7 +3,7 @@ import redis.asyncio as redis
 
 from allocation.app.settings import settings
 
-REDIS_URL = settings.get_redis_uri()
+REDIS_URL = settings.get_redis_url()
 r = redis.from_url(REDIS_URL)
 
 

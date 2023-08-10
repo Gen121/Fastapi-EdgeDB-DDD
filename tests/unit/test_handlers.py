@@ -191,7 +191,7 @@ class TestChangeBatchQuantity:
         await messagebus.handle(commands.ChangeBatchQuantity("batch1", 25))
 
         # assert on new events emitted rather than downstream side-effects
-        [reallocation_event] = uow.events_published
+        *_, reallocation_event = uow.events_published
         assert isinstance(reallocation_event, commands.Allocate)
         assert reallocation_event.orderid in {"order1", "order2"}
         assert reallocation_event.sku == "INDIFFERENT-TABLE"

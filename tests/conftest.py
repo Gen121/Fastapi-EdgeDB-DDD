@@ -97,7 +97,7 @@ async def wait_for_webapp_to_come_up(async_test_client: AsyncClient):
 
 async def wait_for_redis_to_come_up():
     deadline = time.time() + 5
-    r = await redis.from_url(settings.get_redis_uri())
+    r = await redis.from_url(settings.get_redis_url())
     while time.time() < deadline:
         try:
             attempt = await r.ping()
