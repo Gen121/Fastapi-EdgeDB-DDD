@@ -1,3 +1,4 @@
+from http import HTTPStatus
 import json
 import pytest
 from tenacity import AsyncRetrying, RetryError, stop_after_delay
@@ -20,7 +21,7 @@ async def test_change_batch_quantity_leading_to_reallocation(
         async_test_client, later_batch, sku, qty=10, eta="2011-01-02"
     )
     response = await api_client.post_to_allocate(async_test_client, orderid, sku, 10)
-    assert response.json()["batchref"] == earlier_batch
+    assert response.status_code == HTTPStatus.ACCEPTED
 
     subscription = await redis_client.subscribe_to("line_allocated")
 

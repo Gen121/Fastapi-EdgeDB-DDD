@@ -4,16 +4,16 @@ import datetime
 import allocation.repositories.repository as repository
 from allocation.adapters.pyd_model import Batch, OrderLine, Product
 
-from .utils import (add_allocateion_to_batch_by_ids, get_allocations,
-                    insert_batch, insert_order_line)
+from .utils import add_allocateion_to_batch_by_ids, get_allocations, insert_batch, insert_order_line
 
 
 async def test_repository_can_save_a_batch(async_client_db, random_batchref, random_sku):
     repo = repository.EdgeDBRepository(async_client_db)
-    bath_ref = f'repository_can_save_{random_batchref()}'
-    sku = f'repository_can_save_{random_sku()}'
-    batch = Batch(reference=bath_ref, sku=sku,
-                  purchased_quantity=100, eta=datetime.date(2011, 1, 2))
+    bath_ref = f"repository_can_save_{random_batchref()}"
+    sku = f"repository_can_save_{random_sku()}"
+    batch = Batch(
+        reference=bath_ref, sku=sku, purchased_quantity=100, eta=datetime.date(2011, 1, 2)
+    )
     product = Product(sku=sku, batches=[batch], version_number=1)
 
     await repo.add(product)
@@ -29,9 +29,11 @@ async def test_repository_can_save_a_batch(async_client_db, random_batchref, ran
     assert batch_db == batch
 
 
-async def test_repository_can_retrieve_a_batch_with_allocations(async_client_db, random_batchref, random_orderid, random_sku):
+async def test_repository_can_retrieve_a_batch_with_allocations(
+    async_client_db, random_batchref, random_orderid, random_sku
+):
     repo = repository.EdgeDBRepository(async_client_db)
-    orderid = f'can_retrieve_a_batch_with_allocation_{random_orderid()}'
+    orderid = f"can_retrieve_a_batch_with_allocation_{random_orderid()}"
     sku = f"can_retrieve_a_batch_with_allocations{random_sku()}"
     bath_ref = f"can_retrieve_a_batch_with_{random_batchref()}"
 
@@ -43,8 +45,12 @@ async def test_repository_can_retrieve_a_batch_with_allocations(async_client_db,
     product = await repo.get(sku=sku)  # , allocations=True
     [retrieved] = [batch for batch in product.batches if batch.reference == bath_ref]
 
-    expected = Batch(reference=bath_ref, sku=sku, eta=datetime.date(
-        2011, 1, 2), purchased_quantity=100,)
+    expected = Batch(
+        reference=bath_ref,
+        sku=sku,
+        eta=datetime.date(2011, 1, 2),
+        purchased_quantity=100,
+    )
 
     assert retrieved == expected  # Batch.__eq__ only compares reference
     assert retrieved.allocations == {
@@ -52,7 +58,9 @@ async def test_repository_can_retrieve_a_batch_with_allocations(async_client_db,
     }
 
 
-async def test_repository_updating_a_batch(async_client_db, random_orderid, random_batchref, random_sku):
+async def test_repository_updating_a_batch(
+    async_client_db, random_orderid, random_batchref, random_sku
+):
     repo = repository.EdgeDBRepository(async_client_db)
     orderid = f"updating_a_batch_{random_orderid()}"
     sku = f"updating_a_batch_{random_sku()}"
@@ -60,8 +68,12 @@ async def test_repository_updating_a_batch(async_client_db, random_orderid, rand
 
     order1 = OrderLine(orderid=orderid, sku=sku, qty=10)
     order2 = OrderLine(orderid=orderid + "_2", sku=sku, qty=20)
-    batch = Batch(reference=batch_ref, sku=sku, eta=datetime.date(
-        2011, 1, 2), purchased_quantity=100,)
+    batch = Batch(
+        reference=batch_ref,
+        sku=sku,
+        eta=datetime.date(2011, 1, 2),
+        purchased_quantity=100,
+    )
 
     batch.allocate(order1)
     product = Product(sku=sku, batches=[batch], version_number=0)
@@ -72,3 +84,24 @@ async def test_repository_updating_a_batch(async_client_db, random_orderid, rand
     await repo.add(product)
 
     assert await get_allocations(async_client_db, batch_ref) == {order1.orderid, order2.orderid}
+
+
+async def test_get_by_batchref(
+    async_client_db, random_batchref, random_sku
+):  # TODO: fix sometime failed
+    repo = repository.EdgeDBRepository(async_client_db)
+    batchref_1, batchref_2, batchref_3 = (
+        random_batchref("b1"),
+        random_batchref("b2"),
+        random_batchref("b3"),
+    )
+    sku_1, sku_2 = random_sku("sku1"), random_sku("sku2")
+    b1 = Batch(reference=batchref_1, sku=sku_1, purchased_quantity=100, eta=None)
+    b2 = Batch(reference=batchref_2, sku=sku_1, purchased_quantity=100, eta=None)
+    b3 = Batch(reference=batchref_3, sku=sku_2, purchased_quantity=100, eta=None)
+    p1 = Product(sku=sku_1, batches=[b1, b2], version_number=1)
+    p2 = Product(sku=sku_2, batches=[b3], version_number=1)
+    await repo.add(p1)
+    await repo.add(p2)
+    assert await repo.get_by_batchref(batchref_2) == p1
+    assert await repo.get_by_batchref(batchref_3) == p2

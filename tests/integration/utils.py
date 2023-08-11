@@ -6,14 +6,13 @@ import edgedb
 
 
 async def insert_product(  # TODO
-    async_client_db: edgedb.AsyncIOClient,
-    sku: str,
-    version_number: int
+    async_client_db: edgedb.AsyncIOClient, sku: str, version_number: int
 ) -> UUID | None:
     try:
         product = await async_client_db.query(
             "INSERT Product {sku := <str>$sku, version_number := <int16>$version_number}",
-            sku=sku, version_number=version_number,
+            sku=sku,
+            version_number=version_number,
         )
         return product[0].id
     except edgedb.errors.ConstraintViolationError:
@@ -27,7 +26,7 @@ async def insert_batch(
     sku,
     qty=100,
     eta=datetime.date(2011, 1, 2),
-    version_number=1
+    version_number=1,
 ) -> UUID:
     await insert_product(async_client_db, sku, version_number)
     batch = await async_client_db.query(
@@ -37,7 +36,10 @@ async def insert_batch(
             eta := <cal::local_date>$eta,
             purchased_quantity := <int16>$purchased_quantity
         }""",
-        reference=ref, sku=sku, purchased_quantity=qty, eta=eta
+        reference=ref,
+        sku=sku,
+        purchased_quantity=qty,
+        eta=eta,
     )
     return batch[0].id
 
@@ -78,10 +80,7 @@ async def add_allocateion_to_batch_by_ids(
     )
 
 
-async def get_allocations(
-    async_client_db: edgedb.AsyncIOClient,
-    reference: str
-) -> set[UUID]:
+async def get_allocations(async_client_db: edgedb.AsyncIOClient, reference: str) -> set[UUID]:
     json_ = await async_client_db.query_json(
         """
         SELECT OrderLine {orderid}
@@ -89,4 +88,19 @@ async def get_allocations(
         """,
         reference=reference,
     )
-    return {i['orderid'] for i in json.loads(json_)}
+    return {i["orderid"] for i in json.loads(json_)}
+
+
+async def get_allocated_batch_ref(async_client_db, orderid, sku):
+    [orderlineid] = await async_client_db.query(
+        "SELECT OrderLine { id } FILTER .orderid=<str>$orderid AND .sku=<str>$sku",
+        orderid=orderid,
+        sku=sku,
+    )
+    orderlineid = orderlineid.id
+    [batchref] = await async_client_db.query(
+        "SELECT Batch { reference } FILTER .allocations.id=<uuid>$orderlineid",
+        orderlineid=orderlineid,
+    )
+    batchref = batchref.reference
+    return batchref

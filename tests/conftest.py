@@ -3,6 +3,7 @@ import asyncio
 import shutil
 import subprocess
 import time
+from typing import AsyncGenerator
 import uuid
 from http import HTTPStatus
 from pathlib import Path
@@ -18,16 +19,22 @@ from requests.exceptions import RequestException
 from allocation.app.main import make_app
 from allocation.app.settings import settings
 
+pytest.register_assert_rewrite("tests.e2e.api_client")
+
 
 @pytest.fixture
 async def async_client_db() -> edgedb.AsyncIOClient:
-    async_client_db = edgedb.create_async_client(settings.get_edgedb_dsn(test_db=True), tls_security="insecure")
+    async_client_db = edgedb.create_async_client(
+        settings.get_edgedb_dsn(test_db=True), tls_security="insecure"
+    )
     await wait_for_edgedb_to_come_up(async_client_db)
     return async_client_db
 
 
 @pytest.fixture
-async def async_test_client(async_client_db: edgedb.AsyncIOClient):
+async def async_test_client(
+    async_client_db: edgedb.AsyncIOClient,
+) -> AsyncGenerator[AsyncClient, str]:
     app = make_app()
     app.state.edgedb = async_client_db
     async with AsyncClient(app=app, base_url=settings.get_api_url()) as client:

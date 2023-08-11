@@ -15,10 +15,7 @@ class OrderLine(BaseModel, model.OrderLine):
     orderid: str
     id: UUID | None = Field(default=None, exclude=True)
 
-    model_config = ConfigDict(
-        from_attributes=True,
-        frozen=True
-    )
+    model_config = ConfigDict(from_attributes=True, frozen=True)
 
     def __hash__(self):
         return hash((self.sku, self.qty, self.orderid))
@@ -27,11 +24,13 @@ class OrderLine(BaseModel, model.OrderLine):
         if not isinstance(other, model.OrderLine):
             return False
 
-        return all((
-            other.orderid == self.orderid,
-            other.sku == self.sku,
-            other.qty == self.qty,
-        ))
+        return all(
+            (
+                other.orderid == self.orderid,
+                other.sku == self.sku,
+                other.qty == self.qty,
+            )
+        )
 
 
 class OrderLineWithAllocatedIn(OrderLine):
@@ -39,16 +38,17 @@ class OrderLineWithAllocatedIn(OrderLine):
 
 
 class Batch(BaseModel, model.Batch):
-    id: UUID | None = Field(default=None, exclude=True,)
+    id: UUID | None = Field(
+        default=None,
+        exclude=True,
+    )
     reference: str
     sku: str
     eta: date | None
     purchased_quantity: int
     allocations: set[OrderLine] | None = Field(default_factory=set)
 
-    model_config = ConfigDict(
-        from_attributes=True
-    )
+    model_config = ConfigDict(from_attributes=True)
 
     def __hash__(self):
         return hash(self.reference)
@@ -60,11 +60,17 @@ class Batch(BaseModel, model.Batch):
 
 
 class Product(BaseModel, model.Product):
-    id: UUID | None = Field(default=None, exclude=True,)
+    id: UUID | None = Field(
+        default=None,
+        exclude=True,
+    )
     sku: str
     batches: list[Batch] | None = Field(default_factory=list)
     version_number: int
-    events: list = Field(default_factory=list, exclude=True,)
+    events: list = Field(
+        default_factory=list,
+        exclude=True,
+    )
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -72,6 +78,16 @@ class Product(BaseModel, model.Product):
 
     def __hash__(self):
         return hash(self.sku)
+
+    def __eq__(self, other):
+        if not isinstance(other, Product):
+            return False
+        return all(
+            (
+                other.sku == self.sku,
+                other.batches == self.batches,
+            )
+        )
 
 
 OrderLineWithAllocatedIn.model_rebuild()

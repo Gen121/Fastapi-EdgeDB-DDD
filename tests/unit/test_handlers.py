@@ -86,10 +86,11 @@ class TestAllocate:
         await messagebus.handle(
             commands.CreateBatch("batch1", "COMPLICATED-LAMP", 100, None),
         )
-        result = await messagebus.handle(
+        await messagebus.handle(
             commands.Allocate("o1", "COMPLICATED-LAMP", 10),
         )
-        assert result[0] == "batch1"
+        product = await uow.products.get("COMPLICATED-LAMP")
+        assert product.batches[0].available_quantity == 90
 
     async def test_allocate_errors_for_invalid_sku(self):
         uow = FakeUnitOfWork()

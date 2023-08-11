@@ -8,6 +8,7 @@ from allocation.dbschema.config import setup_edgedb, shutdown_edgedb
 from allocation.domain import commands
 from allocation.services import handlers, unit_of_work
 from allocation.services.messagebus import get_messagebus
+from allocation import views
 
 
 def make_app(test_db: bool = False):
@@ -30,28 +31,34 @@ def make_app(test_db: bool = False):
 
     @app.post("/add_batch", status_code=HTTPStatus.CREATED)
     async def add_batch(
-        batch: commands.CreateBatch, uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
+        batch: commands.CreateBatch,
+        uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow),
     ) -> dict[str, str]:
         # if batch.eta is not None:
         #     batch.eta = datetime.datetime.fromisoformat(batch.eta).date()
         messagebus = await get_messagebus(unit_of_work=uow)
-        await messagebus.handle(
-            batch,
-        )
+        await messagebus.handle(batch)
         return {"status": "Ok"}
 
-    @app.post("/allocate", status_code=HTTPStatus.CREATED)
+    @app.post("/allocate", status_code=HTTPStatus.ACCEPTED)
     async def allocate_endpoint(
         line: commands.Allocate, uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
     ) -> dict[str, str]:
         messagebus = await get_messagebus(unit_of_work=uow)
         try:
-            batchref = await messagebus.handle(
-                line,
-            )
+            await messagebus.handle(line)
         except handlers.InvalidSku as e:
             raise HTTPException(HTTPStatus.BAD_REQUEST, detail=e.args[0])
-        return {"batchref": batchref[0]}
+        return {"status": "Ok"}
+
+    @app.get("/allocations/{orderid}", status_code=HTTPStatus.OK)
+    async def allocations_view_endpoint(
+        orderid: str, uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
+    ):
+        result = await views.allocations(orderid, uow)
+        if not result:
+            raise HTTPException(HTTPStatus.NOT_FOUND, detail="not found")
+        return result
 
     return app
 

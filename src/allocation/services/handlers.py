@@ -58,16 +58,15 @@ async def add_batch(
 async def allocate(
     cmd: commands.Allocate,
     uow: unit_of_work.AbstractUnitOfWork,
-) -> str | None:
+) -> None:
     line = OrderLine(orderid=cmd.orderid, sku=cmd.sku, qty=cmd.qty)
     async with uow:
         product = await uow.products.get(line.sku)
         if not product:
             raise InvalidSku(f"Invalid sku {line.sku}")
-        batchref = product.allocate(line)
+        product.allocate(line)
         await uow.products.add(product)
         await uow.commit()
-    return batchref
 
 
 async def change_batch_quantity(

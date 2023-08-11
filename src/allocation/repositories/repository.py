@@ -133,22 +133,12 @@ class EdgeDBRepository(AbstractRepository):
                 }
             )),
             for order_line in array_unpack(list_orders) union (
-                SELECT (
                 INSERT OrderLine {
                     orderid := <str>order_line['orderid'],
                     qty := <int16>order_line['qty'],
                     sku := <str>order_line['sku'],
                     allocated_in := new_batch
-                } UNLESS CONFLICT ON .orderid ELSE (
-                    UPDATE OrderLine
-                    SET {
-                        orderid := <str>order_line['orderid'],
-                        qty := <int16>order_line['qty'],
-                        sku := <str>order_line['sku'],
-                        allocated_in := new_batch
-                    }
-                )
-                )
+                }
             );
             WITH obj := <json>$data,
             SELECT Batch FILTER .reference = <str>obj['reference'];
