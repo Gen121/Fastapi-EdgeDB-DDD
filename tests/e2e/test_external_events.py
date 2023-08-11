@@ -22,6 +22,8 @@ async def test_change_batch_quantity_leading_to_reallocation(
     )
     response = await api_client.post_to_allocate(async_test_client, orderid, sku, 10)
     assert response.status_code == HTTPStatus.ACCEPTED
+    response = await api_client.get_allocation(async_test_client, orderid)
+    assert response.json()[0]["batchref"] == earlier_batch
 
     subscription = await redis_client.subscribe_to("line_allocated")
 
