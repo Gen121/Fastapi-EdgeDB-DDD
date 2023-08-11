@@ -36,7 +36,7 @@ def make_app(test_db: bool = False):
     ) -> dict[str, str]:
         # if batch.eta is not None:
         #     batch.eta = datetime.datetime.fromisoformat(batch.eta).date()
-        messagebus = await get_messagebus(unit_of_work=uow)
+        messagebus = await get_messagebus(uow)
         await messagebus.handle(batch)
         return {"status": "Ok"}
 
@@ -44,7 +44,7 @@ def make_app(test_db: bool = False):
     async def allocate_endpoint(
         line: commands.Allocate, uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
     ) -> dict[str, str]:
-        messagebus = await get_messagebus(unit_of_work=uow)
+        messagebus = await get_messagebus(uow)
         try:
             await messagebus.handle(line)
         except handlers.InvalidSku as e:

@@ -18,7 +18,7 @@ module default {
             rewrite insert, update using (
                 (SELECT Product filter .sku = __subject__.sku)
             )
-        }
+        };
         eta: cal::local_date;
         required purchased_quantity: int16;
         multi link allocations := .<allocated_in[is OrderLine];
@@ -31,5 +31,11 @@ module default {
         };
         required version_number: int16;
         multi link batches := .<product[is Batch];
-    }
+    };
+
+    type AllocationsView {
+        orderid: str {constraint max_len_value(255)};
+        sku: str {constraint max_len_value(255)};
+        batchref: str {constraint max_len_value(255)};
+    };
 }

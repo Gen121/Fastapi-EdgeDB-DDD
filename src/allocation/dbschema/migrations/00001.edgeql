@@ -1,7 +1,18 @@
-CREATE MIGRATION m1uqgkh6vyciv2dqsr5zg3w3kstlxh2v4zrrlieyeg232giknjakxq
+CREATE MIGRATION m1twano4hvetylbn7cdw3vlcysjwywmzfahiwiey4caa2m3zxxxvhq
     ONTO initial
 {
   CREATE FUTURE nonrecursive_access_policies;
+  CREATE TYPE default::AllocationsView {
+      CREATE PROPERTY batchref: std::str {
+          CREATE CONSTRAINT std::max_len_value(255);
+      };
+      CREATE PROPERTY orderid: std::str {
+          CREATE CONSTRAINT std::max_len_value(255);
+      };
+      CREATE PROPERTY sku: std::str {
+          CREATE CONSTRAINT std::max_len_value(255);
+      };
+  };
   CREATE TYPE default::Batch {
       CREATE PROPERTY sku: std::str {
           CREATE CONSTRAINT std::max_len_value(255);

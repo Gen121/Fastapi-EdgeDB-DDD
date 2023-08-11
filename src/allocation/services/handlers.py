@@ -20,7 +20,9 @@ async def allocate_in_current_batch(batch: Batch, orrderlines: set[dict]) -> Non
         batch.allocate(orderline)
     if isinstance(batch.allocations, Sized):
         if len(batch.allocations) < len(to_allocate):
-            raise OutOfStockInBatch("There is not enough stock for the {line.sku} article in this batch")
+            raise OutOfStockInBatch(
+                "There is not enough stock for the {line.sku} article in this batch"
+            )
 
 
 async def get(
@@ -50,7 +52,9 @@ async def add_batch(
         product = await uow.products.get(cmd.sku)
         if not product:
             product = Product(sku=cmd.sku, version_number=0, batches=[])
-        product.add_batch(Batch(reference=cmd.ref, sku=cmd.sku, purchased_quantity=cmd.qty, eta=cmd.eta))
+        product.add_batch(
+            Batch(reference=cmd.ref, sku=cmd.sku, purchased_quantity=cmd.qty, eta=cmd.eta)
+        )
         await uow.products.add(product)
         await uow.commit()
 
@@ -94,3 +98,21 @@ async def publish_allocated_event(
     uow: unit_of_work.AbstractUnitOfWork,
 ):
     await redis_eventpublisher.publish("line_allocated", event)
+
+
+async def add_allocation_to_read_model(
+    event: events.Allocated,
+    uow: unit_of_work.AbstractUnitOfWork,
+):
+    async with uow:
+        await uow.async_client.query(
+            """ INSERT AllocationsView {
+                sku := <str>$sku,
+                batchref := <str>$batchref,
+                orderid := <str>$orderid
+            }""",
+            sku=event.sku,
+            batchref=event.batchref,
+            orderid=event.orderid,
+        )
+        await uow.commit()
