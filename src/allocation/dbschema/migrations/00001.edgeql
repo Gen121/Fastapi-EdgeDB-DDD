@@ -1,4 +1,4 @@
-CREATE MIGRATION m1ndfvew3ztvd6nextuh6rbzooob3qekvdvje3yze5kqqs36fgoxfa
+CREATE MIGRATION m1uqgkh6vyciv2dqsr5zg3w3kstlxh2v4zrrlieyeg232giknjakxq
     ONTO initial
 {
   CREATE FUTURE nonrecursive_access_policies;
@@ -16,7 +16,6 @@ CREATE MIGRATION m1ndfvew3ztvd6nextuh6rbzooob3qekvdvje3yze5kqqs36fgoxfa
   CREATE TYPE default::OrderLine {
       CREATE LINK allocated_in: default::Batch;
       CREATE PROPERTY orderid: std::str {
-          CREATE CONSTRAINT std::exclusive;
           CREATE CONSTRAINT std::max_len_value(255);
       };
       CREATE REQUIRED PROPERTY qty: std::int16;

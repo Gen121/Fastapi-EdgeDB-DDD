@@ -2,7 +2,6 @@ module default {
     type OrderLine {
         orderid: str {
             constraint max_len_value(255);
-            constraint exclusive
         };
         sku: str {constraint max_len_value(255)};
         required qty: int16;
