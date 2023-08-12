@@ -98,4 +98,4 @@ class Product:
         batch.purchased_quantity = qty
         while batch.available_quantity < 0:
             line = batch.deallocate_one()
-            self.events.append(commands.Allocate(line.orderid, line.sku, line.qty))
+            self.events.append(events.Deallocated(line.orderid, line.sku, line.qty))

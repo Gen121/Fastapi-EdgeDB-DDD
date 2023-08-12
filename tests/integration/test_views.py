@@ -32,3 +32,22 @@ async def test_allocations_view(async_client_db, random_batchref, random_sku, ra
         {"sku": sku_1, "batchref": batchref_1},
         {"sku": sku_2, "batchref": batchref_2},
     ]
+
+
+async def test_deallocation(async_client_db, random_batchref, random_sku, random_orderid):
+    uow = unit_of_work.EdgedbUnitOfWork(async_client_db)
+    messagebus = await get_messagebus(uow)
+    sku = random_sku("sku1")
+    orderid = random_orderid()
+    batchref_1, batchref_2 = (
+        random_batchref("sku1"),
+        random_batchref("sku2"),
+    )
+    await messagebus.handle(commands.CreateBatch(batchref_1, sku, 50, None))
+    await messagebus.handle(commands.CreateBatch(batchref_2, sku, 50, today))
+    await messagebus.handle(commands.Allocate(orderid, sku, 40))
+    await messagebus.handle(commands.ChangeBatchQuantity(batchref_1, 10))
+
+    assert await views.allocations(orderid, uow) == [
+        {"sku": sku, "batchref": batchref_2},
+    ]

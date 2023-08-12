@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from typing import Sized
 
 from allocation.adapters import redis_eventpublisher, email
@@ -83,6 +84,16 @@ async def change_batch_quantity(
         await uow.commit()
 
 
+async def reallocate(
+    event: events.Deallocated,
+    uow: unit_of_work.AbstractUnitOfWork,
+):
+    async with uow:
+        product = await uow.products.get(sku=event.sku)
+        product.events.append(commands.Allocate(**asdict(event)))
+        await uow.commit()
+
+
 async def send_out_of_stock_notification(
     event: events.OutOfStock,
     uow: unit_of_work.AbstractUnitOfWork,
@@ -102,17 +113,33 @@ async def publish_allocated_event(
 
 async def add_allocation_to_read_model(
     event: events.Allocated,
-    uow: unit_of_work.AbstractUnitOfWork,
+    uow: unit_of_work.EdgedbUnitOfWork,
 ):
     async with uow:
         await uow.async_client.query(
             """ INSERT AllocationsView {
-                sku := <str>$sku,
-                batchref := <str>$batchref,
-                orderid := <str>$orderid
+                    batchref := <str>$batchref,
+                    orderid := <str>$orderid,
+                    sku := <str>$sku
             }""",
-            sku=event.sku,
             batchref=event.batchref,
             orderid=event.orderid,
+            sku=event.sku,
+        )
+        await uow.commit()
+
+
+async def remove_allocation_from_read_model(
+    event: events.Deallocated,
+    uow: unit_of_work.EdgedbUnitOfWork,
+):
+    async with uow:
+        await uow.async_client.query(
+            """ DELETE AllocationsView
+                FILTER
+                    .orderid = <str>$orderid and .sku = <str>$sku
+            """,
+            orderid=event.orderid,
+            sku=event.sku,
         )
         await uow.commit()

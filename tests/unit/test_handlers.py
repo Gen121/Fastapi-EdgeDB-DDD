@@ -23,7 +23,9 @@ class FakeRepository(repository.AbstractRepository):
         return product
 
     async def _get_by_batchref(self, batchref) -> model.Product | None:
-        product = next((p for p in self._products if batchref in (b.reference for b in p.batches)), None)
+        product = next(
+            (p for p in self._products if batchref in (b.reference for b in p.batches)), None
+        )
         return product
 
 
@@ -193,6 +195,6 @@ class TestChangeBatchQuantity:
 
         # assert on new events emitted rather than downstream side-effects
         *_, reallocation_event = uow.events_published
-        assert isinstance(reallocation_event, commands.Allocate)
+        assert isinstance(reallocation_event, events.Deallocated)
         assert reallocation_event.orderid in {"order1", "order2"}
         assert reallocation_event.sku == "INDIFFERENT-TABLE"

@@ -14,14 +14,15 @@ AsyncEventHandler = Callable[..., Awaitable[Any | None]]
 Message = commands.Command | events.Event
 
 EVENT_HANDLERS: dict[type[events.Event], list[AsyncEventHandler]] = {
+    events.Allocated: [handlers.publish_allocated_event, handlers.add_allocation_to_read_model],
+    events.Deallocated: [handlers.remove_allocation_from_read_model, handlers.reallocate],
     events.OutOfStock: [handlers.send_out_of_stock_notification],
-    events.Allocated: [handlers.publish_allocated_event, handlers.add_allocation_to_read_model]
 }
 
 COMMAND_HANDLERS: dict[type[commands.Command], AsyncEventHandler] = {
-    commands.CreateBatch: handlers.add_batch,
     commands.Allocate: handlers.allocate,
     commands.ChangeBatchQuantity: handlers.change_batch_quantity,
+    commands.CreateBatch: handlers.add_batch,
 }
 
 
@@ -89,5 +90,7 @@ class MessageBus(AbstractMessageBus):
         self.queue.extend(list_of_event)
 
 
-async def get_messagebus(unit_of_work: unit_of_work.AbstractUnitOfWork = Depends(unit_of_work.get_uow)) -> MessageBus:
+async def get_messagebus(
+    unit_of_work: unit_of_work.AbstractUnitOfWork = Depends(unit_of_work.get_uow),
+) -> MessageBus:
     return MessageBus(unit_of_work, EVENT_HANDLERS, COMMAND_HANDLERS)
