@@ -2,28 +2,14 @@ import abc
 import logging
 from typing import Any, Awaitable, Callable
 
-from fastapi import Depends
-
 from allocation.domain import commands, events
 
-from . import handlers, unit_of_work
+from . import unit_of_work
 
 logger = logging.getLogger(__name__)
 
 AsyncEventHandler = Callable[..., Awaitable[Any | None]]
 Message = commands.Command | events.Event
-
-EVENT_HANDLERS: dict[type[events.Event], list[AsyncEventHandler]] = {
-    events.Allocated: [handlers.publish_allocated_event, handlers.add_allocation_to_read_model],
-    events.Deallocated: [handlers.remove_allocation_from_read_model, handlers.reallocate],
-    events.OutOfStock: [handlers.send_out_of_stock_notification],
-}
-
-COMMAND_HANDLERS: dict[type[commands.Command], AsyncEventHandler] = {
-    commands.Allocate: handlers.allocate,
-    commands.ChangeBatchQuantity: handlers.change_batch_quantity,
-    commands.CreateBatch: handlers.add_batch,
-}
 
 
 class AbstractMessageBus(abc.ABC):
@@ -39,7 +25,6 @@ class AbstractMessageBus(abc.ABC):
 
     async def handle(self, message: Message):
         self.queue = [message]
-        self.results: list = []
         while self.queue:
             message = self.queue.pop(0)
             match message:
@@ -49,7 +34,6 @@ class AbstractMessageBus(abc.ABC):
                     await self.command_handler(message)
                 case _:
                     raise Exception(f"{message} was not an Event or Command")
-        return self.results
 
     @abc.abstractmethod
     async def event_handler(self, event: events.Event):
@@ -64,33 +48,23 @@ class MessageBus(AbstractMessageBus):
     async def event_handler(self, event: events.Event):
         for handler in self.event_handlers[type(event)]:
             try:
-                self.results.append(await handler(event=event, uow=self.uow))
+                logger.debug(f"handling event {event} with handler {handler}")
+                await handler(event)
+                events_list = [event async for event in self.uow.collect_new_events()]
+                self.queue.extend(events_list)
             except Exception:
                 logger.exception("Exception handling event %s", event)
                 continue
-            list_of_event = []
-            async for event in self.uow.collect_new_events():
-                if not event:
-                    continue
-                list_of_event.append(event)
-            self.queue.extend(list_of_event)
 
     async def command_handler(self, command: commands.Command):
         handler = self.command_handlers[type(command)]
         try:
-            self.results.append(await handler(cmd=command, uow=self.uow))
+            logger.debug(f"handling command {command}")
+            await handler(command)
+            events_list = [event async for event in self.uow.collect_new_events()]
+            self.queue.extend(events_list)
         except Exception:
-            logger.exception("Exception handling command %s", command)
+            logger.exception(
+                "Exception handling command {command} with handler {handler}"
+            )
             raise
-        list_of_event = []
-        async for command in self.uow.collect_new_events():
-            if not command:
-                continue
-            list_of_event.append(command)
-        self.queue.extend(list_of_event)
-
-
-async def get_messagebus(
-    unit_of_work: unit_of_work.AbstractUnitOfWork = Depends(unit_of_work.get_uow),
-) -> MessageBus:
-    return MessageBus(unit_of_work, EVENT_HANDLERS, COMMAND_HANDLERS)

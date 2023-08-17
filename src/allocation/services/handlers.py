@@ -1,10 +1,12 @@
 from dataclasses import asdict
-from typing import Sized
+from typing import Any, Awaitable, Callable, Sized
 
-from allocation.adapters import redis_eventpublisher, email
 from allocation.adapters.pyd_model import Batch, OrderLine, Product
 from allocation.domain import commands, events
 from allocation.services import unit_of_work
+
+AsyncEventHandler = Callable[..., Awaitable[Any | None]]
+Message = commands.Command | events.Event
 
 
 class InvalidSku(Exception):
@@ -88,17 +90,14 @@ async def reallocate(
     event: events.Deallocated,
     uow: unit_of_work.AbstractUnitOfWork,
 ):
-    async with uow:
-        product = await uow.products.get(sku=event.sku)
-        product.events.append(commands.Allocate(**asdict(event)))
-        await uow.commit()
+    await allocate(cmd=commands.Allocate(**asdict(event)), uow=uow)
 
 
 async def send_out_of_stock_notification(
     event: events.OutOfStock,
-    uow: unit_of_work.AbstractUnitOfWork,
+    send_mail: Callable[..., Awaitable[None]],
 ):
-    await email.send(
+    await send_mail(
         "stock@made.com",
         f"Out of stock for {event.sku}",
     )
@@ -106,9 +105,9 @@ async def send_out_of_stock_notification(
 
 async def publish_allocated_event(
     event: events.Allocated,
-    uow: unit_of_work.AbstractUnitOfWork,
+    publish: Callable[..., Awaitable[None]],
 ):
-    await redis_eventpublisher.publish("line_allocated", event)
+    await publish("line_allocated", event)
 
 
 async def add_allocation_to_read_model(
@@ -143,3 +142,19 @@ async def remove_allocation_from_read_model(
             sku=event.sku,
         )
         await uow.commit()
+
+
+EVENT_HANDLERS: dict[type[events.Event], list[AsyncEventHandler]] = {
+    events.Allocated: [
+        publish_allocated_event,
+        add_allocation_to_read_model,
+    ],
+    events.Deallocated: [remove_allocation_from_read_model, reallocate],
+    events.OutOfStock: [send_out_of_stock_notification],
+}
+
+COMMAND_HANDLERS: dict[type[commands.Command], AsyncEventHandler] = {
+    commands.Allocate: allocate,
+    commands.ChangeBatchQuantity: change_batch_quantity,
+    commands.CreateBatch: add_batch,
+}

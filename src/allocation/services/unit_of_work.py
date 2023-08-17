@@ -4,9 +4,7 @@ from __future__ import annotations
 import abc
 
 import edgedb
-from fastapi import Depends
 
-from allocation.dbschema.config import get_edgedb_client
 from allocation.repositories import repository
 
 
@@ -50,6 +48,7 @@ class EdgedbUnitOfWork(AbstractUnitOfWork):
         except (edgedb.errors.InternalClientError, edgedb.errors.InterfaceError):
             await self.async_client.aclose()
             return True
+        # TODO: implement Optimistic parallelism with version numbers
         # except repository.SynchronousUpdateError:
         #     await self.async_client.aclose()
         #     return False
@@ -58,9 +57,3 @@ class EdgedbUnitOfWork(AbstractUnitOfWork):
 
     async def commit(self):
         return await self.transaction.__aexit__(None, None, None)
-
-
-async def get_uow(
-    async_client_db: edgedb.AsyncIOClient = Depends(get_edgedb_client)
-) -> EdgedbUnitOfWork:
-    return EdgedbUnitOfWork(async_client_db)

@@ -1,21 +1,20 @@
 import functools
 from http import HTTPStatus
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException
 from starlette.middleware.cors import CORSMiddleware
 
-from allocation.dbschema.config import setup_edgedb, shutdown_edgedb
+from allocation import bootstrap, views
 from allocation.domain import commands
-from allocation.services import handlers, unit_of_work
-from allocation.services.messagebus import get_messagebus
-from allocation import views
+from allocation.services import handlers
 
 
 def make_app(test_db: bool = False):
     app = FastAPI()
 
-    app.on_event("startup")(functools.partial(setup_edgedb, app, test_db))
-    app.on_event("shutdown")(functools.partial(shutdown_edgedb, app))
+    messagebus = bootstrap.bootstrap.messagebus
+    app.on_event("startup")(functools.partial(bootstrap.aenter_lifespan, app))
+    app.on_event("shutdown")(functools.partial(bootstrap.aexit_lifespan, app))
 
     app.add_middleware(
         CORSMiddleware,
@@ -30,21 +29,14 @@ def make_app(test_db: bool = False):
         return {"status": "Ok"}
 
     @app.post("/add_batch", status_code=HTTPStatus.CREATED)
-    async def add_batch(
-        batch: commands.CreateBatch,
-        uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow),
-    ) -> dict[str, str]:
-        # if batch.eta is not None:
+    async def add_batch(batch: commands.CreateBatch) -> dict[str, str]:
+        # if batch.eta is not None:  # TODO: вынести в валидаторы
         #     batch.eta = datetime.datetime.fromisoformat(batch.eta).date()
-        messagebus = await get_messagebus(uow)
         await messagebus.handle(batch)
         return {"status": "Ok"}
 
     @app.post("/allocate", status_code=HTTPStatus.ACCEPTED)
-    async def allocate_endpoint(
-        line: commands.Allocate, uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
-    ) -> dict[str, str]:
-        messagebus = await get_messagebus(uow)
+    async def allocate_endpoint(line: commands.Allocate) -> dict[str, str]:
         try:
             await messagebus.handle(line)
         except handlers.InvalidSku as e:
@@ -52,10 +44,8 @@ def make_app(test_db: bool = False):
         return {"status": "Ok"}
 
     @app.get("/allocations/{orderid}", status_code=HTTPStatus.OK)
-    async def allocations_view_endpoint(
-        orderid: str, uow: unit_of_work.EdgedbUnitOfWork = Depends(unit_of_work.get_uow)
-    ):
-        result = await views.allocations(orderid, uow)
+    async def allocations_view_endpoint(orderid: str):
+        result = await views.allocations(orderid, messagebus.uow)
         if not result:
             raise HTTPException(HTTPStatus.NOT_FOUND, detail="not found")
         return result
