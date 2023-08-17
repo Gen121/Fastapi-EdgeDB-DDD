@@ -3,10 +3,10 @@ import asyncio
 import shutil
 import subprocess
 import time
-from typing import AsyncGenerator
 import uuid
 from http import HTTPStatus
 from pathlib import Path
+from typing import AsyncGenerator
 
 import edgedb
 import pytest
@@ -16,6 +16,7 @@ from httpx import AsyncClient
 from redis.exceptions import RedisError
 from requests.exceptions import RequestException
 
+from allocation import bootstrap
 from allocation.app.main import make_app
 from allocation.app.settings import settings
 
@@ -36,11 +37,13 @@ async def async_test_client(
     async_client_db: edgedb.AsyncIOClient,
 ) -> AsyncGenerator[AsyncClient, str]:
     app = make_app()
-    app.state.edgedb = async_client_db
+    app.state.bus = bootstrap.bootstrap.messagebus
+    app.state.bus.uow.async_client = async_client_db
+
     async with AsyncClient(app=app, base_url=settings.get_api_url()) as client:
         yield client
-    client, app.state.edgedb = app.state.edgedb, None
-    await client.aclose()
+    bus, app.state.bus = app.state.bus, None
+    await bus.uow.async_client.aclose()
 
 
 @pytest.fixture

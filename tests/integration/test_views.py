@@ -1,15 +1,24 @@
 from datetime import date
-from allocation import views
+
+import pytest
+
+from allocation import bootstrap, views
 from allocation.domain import commands
 from allocation.services import unit_of_work
-from allocation.services.messagebus import get_messagebus
 
 today = date.today()
 
 
-async def test_allocations_view(async_client_db, random_batchref, random_sku, random_orderid):
-    uow = unit_of_work.EdgedbUnitOfWork(async_client_db)
-    messagebus = await get_messagebus(uow)
+@pytest.fixture
+def messagebus(async_client_db):
+    yield bootstrap.Bootstrap(
+        uow=unit_of_work.EdgedbUnitOfWork(async_client_db),
+        send_mail=lambda *args: None,
+        publish=lambda *args: None,
+    ).messagebus
+
+
+async def test_allocations_view(messagebus, random_batchref, random_sku, random_orderid):
     orderid, orderid_other = random_orderid("order1"), random_orderid("otherorder")
     sku_1, sku_2 = (
         random_sku("sku1"),
@@ -28,15 +37,13 @@ async def test_allocations_view(async_client_db, random_batchref, random_sku, ra
     await messagebus.handle(commands.CreateBatch(batchref_1_later, sku_1, 50, today))
     await messagebus.handle(commands.Allocate(orderid_other, sku_1, 30))
     await messagebus.handle(commands.Allocate(orderid_other, sku_2, 10))
-    assert await views.allocations(orderid, uow) == [
+    assert await views.allocations(orderid, messagebus.uow) == [
         {"sku": sku_1, "batchref": batchref_1},
         {"sku": sku_2, "batchref": batchref_2},
     ]
 
 
-async def test_deallocation(async_client_db, random_batchref, random_sku, random_orderid):
-    uow = unit_of_work.EdgedbUnitOfWork(async_client_db)
-    messagebus = await get_messagebus(uow)
+async def test_deallocation(messagebus, random_batchref, random_sku, random_orderid):
     sku = random_sku("sku1")
     orderid = random_orderid()
     batchref_1, batchref_2 = (
@@ -48,6 +55,6 @@ async def test_deallocation(async_client_db, random_batchref, random_sku, random
     await messagebus.handle(commands.Allocate(orderid, sku, 40))
     await messagebus.handle(commands.ChangeBatchQuantity(batchref_1, 10))
 
-    assert await views.allocations(orderid, uow) == [
+    assert await views.allocations(orderid, messagebus.uow) == [
         {"sku": sku, "batchref": batchref_2},
     ]

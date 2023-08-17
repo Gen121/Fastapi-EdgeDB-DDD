@@ -4,7 +4,12 @@ import datetime
 import allocation.repositories.repository as repository
 from allocation.adapters.pyd_model import Batch, OrderLine, Product
 
-from .utils import add_allocateion_to_batch_by_ids, get_allocations, insert_batch, insert_order_line
+from .utils import (
+    add_allocateion_to_batch_by_ids,
+    get_allocations,
+    insert_batch,
+    insert_order_line,
+)
 
 
 async def test_repository_can_save_a_batch(async_client_db, random_batchref, random_sku):
@@ -83,7 +88,10 @@ async def test_repository_updating_a_batch(
     product.version_number += 1
     await repo.add(product)
 
-    assert await get_allocations(async_client_db, batch_ref) == {order1.orderid, order2.orderid}
+    assert await get_allocations(async_client_db, batch_ref) == {
+        order1.orderid,
+        order2.orderid,
+    }
 
 
 async def test_get_by_batchref(

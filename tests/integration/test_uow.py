@@ -1,12 +1,11 @@
 import datetime
-import traceback
 
 import pytest
 
 from allocation.adapters import pyd_model as model
 from allocation.services import unit_of_work
 
-from .utils import insert_batch, get_allocated_batch_ref
+from .utils import get_allocated_batch_ref, insert_batch
 
 
 async def test_uow_can_retrieve_a_batch_and_allocate_to_it(
@@ -17,7 +16,9 @@ async def test_uow_can_retrieve_a_batch_and_allocate_to_it(
         f"HIPSTER-WORKBENCH-{random_sku()}",
         random_orderid(),
     )
-    await insert_batch(async_client_db, batchref_expected, sku, 100, datetime.date(2011, 1, 2))
+    await insert_batch(
+        async_client_db, batchref_expected, sku, 100, datetime.date(2011, 1, 2)
+    )
 
     uow = unit_of_work.EdgedbUnitOfWork(async_client_db)
     async with uow:
@@ -41,7 +42,9 @@ async def test_rolls_back_uncommitted_work_by_default(async_client_db, random_sk
         await uow.products.add(product)
 
     rows = list(
-        await async_client_db.query(f'SELECT Product {{ * }} FILTER .sku = "{sku_expected}"')
+        await async_client_db.query(
+            f'SELECT Product {{ * }} FILTER .sku = "{sku_expected}"'
+        )
     )
     assert rows == []
 
@@ -62,10 +65,14 @@ async def test_rolls_back_on_error(async_client_db, random_sku):
             raise e
 
     rows = list(
-        await async_client_db.query(f'SELECT Product {{ * }} FILTER .sku = "{sku_expected}"')
+        await async_client_db.query(
+            f'SELECT Product {{ * }} FILTER .sku = "{sku_expected}"'
+        )
     )
     assert rows == []
 
+
+# TODO: implement testing of Optimistic parallelism with version numbers
 
 # async def try_to_allocate(orderid, sku, exceptions, async_client_db):
 #     line = model.OrderLine(orderid=orderid, sku=sku, qty=10)
