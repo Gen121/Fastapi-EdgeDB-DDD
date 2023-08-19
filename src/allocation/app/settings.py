@@ -29,7 +29,7 @@ class Settings(BaseSettings):
 
     def get_edgedb_dsn(self, *, test_db: bool = False) -> str:
         db_name = self.db_name if not test_db else self.db_test_name
-        return f"edgedb://{0}:{1}@{2}:{3}/{4}".format(
+        return "edgedb://{0}:{1}@{2}:{3}/{4}".format(
             self.db_user_name,
             self.db_root_password,
             self.db_hostname,
@@ -56,3 +56,6 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
+
+if __name__ == '__main__':
+    print(settings.get_edgedb_dsn())

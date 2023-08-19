@@ -2,8 +2,7 @@
 import abc
 
 import aiosmtplib
-
-from allocation.app import settings
+from allocation.app.settings import settings
 
 
 class AbstractNotifications(abc.ABC):
@@ -19,7 +18,6 @@ DEFAULT_PORT = settings.get_email_host_and_port()["port"]
 class EmailNotifications(AbstractNotifications):
     def __init__(self, smtp_host=DEFAULT_HOST, port=DEFAULT_PORT):
         self.server = aiosmtplib.SMTP(smtp_host, port=port)
-        await self.server.noop()
 
     async def send(self, destination, message):
         msg = f"Subject: allocation service notification\n{message}"

@@ -4,7 +4,8 @@ from typing import Callable
 import edgedb
 from fastapi import FastAPI, Request
 
-from allocation.adapters import notifications, redis_eventpublisher
+from allocation.adapters import redis_eventpublisher
+from allocation.adapters.notifications import AbstractNotifications, EmailNotifications
 from allocation.app.settings import settings
 from allocation.services import handlers, messagebus, unit_of_work
 
@@ -37,11 +38,11 @@ class Bootstrap:
     def __init__(
         self,
         uow: unit_of_work.AbstractUnitOfWork = get_uow(),
-        notifications: notifications.AbstractNotifications = None,
+        notifications: AbstractNotifications = None,
         publish: Callable = redis_eventpublisher.publish,
     ):
         if not notifications:
-            notifications = notifications.EmailNotifications()
+            notifications = EmailNotifications()
 
         dependencies = {"uow": uow, "notifications": notifications, "publish": publish}
         injected_event_handlers = {
