@@ -4,6 +4,7 @@ from typing import Any, Awaitable, Callable, Sized
 from allocation.adapters.pyd_model import Batch, OrderLine, Product
 from allocation.domain import commands, events
 from allocation.services import unit_of_work
+from allocation.adapters import notifications
 
 AsyncEventHandler = Callable[..., Awaitable[Any | None]]
 Message = commands.Command | events.Event
@@ -95,9 +96,9 @@ async def reallocate(
 
 async def send_out_of_stock_notification(
     event: events.OutOfStock,
-    send_mail: Callable[..., Awaitable[None]],
+    notifications: notifications.AbstractNotifications,
 ):
-    await send_mail(
+    await notifications.send(
         "stock@made.com",
         f"Out of stock for {event.sku}",
     )

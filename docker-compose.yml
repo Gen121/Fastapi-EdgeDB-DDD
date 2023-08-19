@@ -8,6 +8,7 @@ services:
     depends_on:
       - edgedb
       - redis
+      - mailhog
     volumes:
       - ".env:/.venv"
       - "./src:/src"
@@ -20,6 +21,7 @@ services:
     image: allocation-image
     depends_on:
       - redis_pubsub
+      - mailhog
     environment:
       - API_HOST=api
       - FASTAPI_APP=allocation/entrypoints/run.py
@@ -64,6 +66,12 @@ services:
         interval: 5s
         timeout: 3s
         retries: 3
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "11025:1025"
+      - "18025:8025"
 
 volumes:
   edgedb_data:

@@ -1,4 +1,5 @@
 # app
+aiosmtplib
 edgedb
 fastapi[all]
 pydantic-settings
