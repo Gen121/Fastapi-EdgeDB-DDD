@@ -1,6 +1,7 @@
 from datetime import date
 
 import pytest
+from unittest import mock
 
 from allocation import bootstrap, views
 from allocation.domain import commands
@@ -13,7 +14,7 @@ today = date.today()
 def messagebus(async_client_db):
     yield bootstrap.Bootstrap(
         uow=unit_of_work.EdgedbUnitOfWork(async_client_db),
-        send_mail=lambda *args: None,
+        notifications=mock.Mock(),
         publish=lambda *args: None,
     ).messagebus
 

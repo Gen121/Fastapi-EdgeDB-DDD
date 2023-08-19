@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 
 import allocation.repositories.repository as repository
-from allocation.adapters import email
+from allocation.adapters import notifications
 from allocation.bootstrap import Bootstrap
 from allocation.domain import commands, events, model
 from allocation.services import handlers, unit_of_work
@@ -59,10 +59,18 @@ class FakeUnitOfWorkWithFakeMessageBus(FakeUnitOfWork):
                 yield self.events_published.append(product.events.pop(0))
 
 
+class FakeNotifications(notifications.AbstractNotifications):
+    def __init__(self):
+        self.sent: dict[str, list[str]] = {}
+
+    async def send(self, destination, message):
+        self.sent.setdefault(destination, []).append(message)
+
+
 async def bootstrap_test_app():
     return Bootstrap(
         uow=FakeUnitOfWork(),
-        send_mail=lambda *args: None,
+        notifications=FakeNotifications(),
         publish=lambda *args: None,
     ).messagebus
 
@@ -113,24 +121,22 @@ class TestAllocate:
             with pytest.raises(handlers.InvalidSku, match="Invalid sku NONEXISTENTSKU"):
                 raise e
 
-    async def test_sends_email_on_out_of_stock_error(self, monkeypatch):
-        messagebus = await bootstrap_test_app()
-        await messagebus.handle(
-            commands.CreateBatch("b1", "POPULAR-CURTAINS", 9, None),
-        )
-
-        async def mock_send_mail(to, subject):
-            assert to == "stock@made.com"
-            assert subject == "Out of stock for POPULAR-CURTAINS"
-
-        monkeypatch.setattr(email, "send", mock_send_mail)
-
+    async def test_sends_email_on_out_of_stock_error(self):
+        fake_notifs = FakeNotifications()
+        messagebus = Bootstrap(
+            uow=FakeUnitOfWork(),
+            notifications=fake_notifs,
+            publish=lambda *args: None,
+        ).messagebus
         await messagebus.handle(
             commands.CreateBatch("b1", "POPULAR-CURTAINS", 9, None),
         )
         await messagebus.handle(
             commands.Allocate("o1", "POPULAR-CURTAINS", 10),
         )
+        assert fake_notifs.sent["stock@made.com"] == [
+            "Out of stock for POPULAR-CURTAINS",
+        ]
 
 
 class TestChangeBatchQuantity:
