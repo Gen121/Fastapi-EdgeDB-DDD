@@ -14,6 +14,7 @@ r = redis.from_url(settings.get_redis_url())
 
 
 async def consumer_loop():
+    logger.info("Redis pubsub starting")
     messagebus = bootstrap.messagebus
     pubsub = r.pubsub(ignore_subscribe_messages=True)
     await pubsub.subscribe("change_batch_quantity")
@@ -23,7 +24,7 @@ async def consumer_loop():
 
 
 async def handle_change_batch_quantity(m, messagebus):
-    logging.debug("handling %s", m)
+    logging.debug(f"handling {m}")
     data = json.loads(m["data"])
     cmd = commands.ChangeBatchQuantity(ref=data["batchref"], qty=data["qty"])
     await messagebus.handle(cmd)

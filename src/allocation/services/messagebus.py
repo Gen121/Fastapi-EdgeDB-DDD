@@ -53,7 +53,7 @@ class MessageBus(AbstractMessageBus):
                 events_list = [event async for event in self.uow.collect_new_events()]
                 self.queue.extend(events_list)
             except Exception:
-                logger.exception("Exception handling event %s", event)
+                logger.exception("Exception handling event {event}")
                 continue
 
     async def command_handler(self, command: commands.Command):

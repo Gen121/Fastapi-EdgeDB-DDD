@@ -12,5 +12,5 @@ r = redis.from_url(settings.get_redis_url())
 
 
 async def publish(channel, event: events.Event):
-    logging.debug("publishing: channel=%s, event=%s", channel, event)
+    logging.debug(f"publishing: channel={channel}, event={event}")
     await r.publish(channel, json.dumps(asdict(event)))
