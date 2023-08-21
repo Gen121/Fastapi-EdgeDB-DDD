@@ -43,7 +43,7 @@ async def test_rolls_back_uncommitted_work_by_default(async_client_db, random_sk
 
     rows = list(
         await async_client_db.query(
-            f'SELECT Product {{ * }} FILTER .sku = "{sku_expected}"'
+            f""" SELECT Product {{ * }} FILTER .sku = "{sku_expected}" """
         )
     )
     assert rows == []
@@ -66,7 +66,7 @@ async def test_rolls_back_on_error(async_client_db, random_sku):
 
     rows = list(
         await async_client_db.query(
-            f'SELECT Product {{ * }} FILTER .sku = "{sku_expected}"'
+            f""" SELECT Product {{ * }} FILTER .sku = "{sku_expected}" """
         )
     )
     assert rows == []
@@ -95,7 +95,7 @@ async def test_rolls_back_on_error(async_client_db, random_sku):
 # ) -> None:
 #     sku, batch = f"concurrent_updates_{random_sku()}", f"concurrent_updates_{random_batchref()}"
 #     await insert_batch(async_client_db, batch, sku, 100, datetime.date(2011, 1, 2), 1)
-#     order1, order2 = random_orderid(), random_orderid('_2')
+#     order1, order2 = random_orderid(), random_orderid("_2")
 #     exceptions: list[Exception] = []
 
 #     await asyncio.gather(
@@ -111,7 +111,7 @@ async def test_rolls_back_on_error(async_client_db, random_sku):
 #     assert product.version_number == 2
 
 #     [exception] = exceptions
-#     assert 'не получилось сериализовать доступ из-за параллельного обновления' in str(
+#     assert "не получилось сериализовать доступ из-за параллельного обновления" in str(
 #         exception)
 
 #     orders = list(await async_client_db.query(
@@ -122,4 +122,4 @@ async def test_rolls_back_on_error(async_client_db, random_sku):
 
 #     uow = unit_of_work.EdgedbUnitOfWork(async_client_db)
 #     with uow:
-#         await uow.async_client.execute('SELECT 1')
+#         await uow.async_client.execute("SELECT 1")

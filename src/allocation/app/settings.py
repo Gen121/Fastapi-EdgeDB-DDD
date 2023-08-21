@@ -57,5 +57,5 @@ def get_settings() -> Settings:
 
 settings = get_settings()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print(settings.get_edgedb_dsn())

@@ -53,7 +53,10 @@ class EdgeDBRepository(AbstractRepository):
         self.client: edgedb.AsyncIOClient = async_client_db
 
     async def _get(
-        self, sku: str | None = None, batchref: str | None = None, allocations: bool = True
+        self,
+        sku: str | None = None,
+        batchref: str | None = None,
+        allocations: bool = True,
     ) -> model.Product | None:
         """Return Product by SKU."""
         obj_ = await self.client.query_single(
