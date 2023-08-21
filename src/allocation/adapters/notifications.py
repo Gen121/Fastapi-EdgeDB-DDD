@@ -2,6 +2,7 @@
 import abc
 
 import aiosmtplib
+
 from allocation.app.settings import settings
 
 

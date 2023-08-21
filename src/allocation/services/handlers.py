@@ -1,10 +1,10 @@
 from dataclasses import asdict
 from typing import Any, Awaitable, Callable, Sized
 
+from allocation.adapters import notifications
 from allocation.adapters.pyd_model import Batch, OrderLine, Product
 from allocation.domain import commands, events
 from allocation.services import unit_of_work
-from allocation.adapters import notifications
 
 AsyncEventHandler = Callable[..., Awaitable[Any | None]]
 Message = commands.Command | events.Event

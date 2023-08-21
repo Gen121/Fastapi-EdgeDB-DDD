@@ -1,6 +1,7 @@
 import json
 import logging
 from dataclasses import asdict
+
 import redis.asyncio as redis
 
 from allocation.app.settings import settings
