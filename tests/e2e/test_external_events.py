@@ -1,7 +1,9 @@
-from http import HTTPStatus
 import json
+from http import HTTPStatus
+
 import pytest
-from tenacity import AsyncRetrying, RetryError, stop_after_delay
+from tenacity import AsyncRetrying, stop_after_delay
+
 from . import api_client, redis_client
 
 

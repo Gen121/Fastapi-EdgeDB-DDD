@@ -80,7 +80,9 @@ async def add_allocateion_to_batch_by_ids(
     )
 
 
-async def get_allocations(async_client_db: edgedb.AsyncIOClient, reference: str) -> set[UUID]:
+async def get_allocations(
+    async_client_db: edgedb.AsyncIOClient, reference: str
+) -> set[UUID]:
     json_ = await async_client_db.query_json(
         """
         SELECT OrderLine {orderid}

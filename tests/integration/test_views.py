@@ -1,7 +1,7 @@
 from datetime import date
+from unittest import mock
 
 import pytest
-from unittest import mock
 
 from allocation import bootstrap, views
 from allocation.domain import commands

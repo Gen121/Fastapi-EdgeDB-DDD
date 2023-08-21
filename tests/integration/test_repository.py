@@ -96,7 +96,7 @@ async def test_repository_updating_a_batch(
 
 async def test_get_by_batchref(
     async_client_db, random_batchref, random_sku
-):  # TODO: fix sometime failed
+):
     repo = repository.EdgeDBRepository(async_client_db)
     batchref_1, batchref_2, batchref_3 = (
         random_batchref("b1"),

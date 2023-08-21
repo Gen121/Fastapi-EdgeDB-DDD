@@ -1,4 +1,5 @@
 import json
+
 import redis.asyncio as redis
 
 from allocation.app.settings import settings

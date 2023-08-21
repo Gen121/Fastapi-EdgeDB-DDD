@@ -2,10 +2,7 @@ from http import HTTPStatus
 
 import pytest
 
-from allocation.app.settings import settings
 from tests.e2e.api_client import get_allocation, post_to_add_batch, post_to_allocate
-
-API_URL = settings.get_api_url()
 
 
 async def test_health_check(async_test_client):
