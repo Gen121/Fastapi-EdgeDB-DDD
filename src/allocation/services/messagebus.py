@@ -50,7 +50,9 @@ class MessageBus(AbstractMessageBus):
             try:
                 logger.debug(f"handling event {event} with handler {handler}")
                 await handler(event)
-                events_list = [event async for event in self.uow.collect_new_events()]
+                events_list = [
+                    event async for event in self.uow.collect_new_events() if event
+                ]
                 self.queue.extend(events_list)
             except Exception:
                 logger.exception("Exception handling event {event}")
@@ -61,8 +63,10 @@ class MessageBus(AbstractMessageBus):
         try:
             logger.debug(f"handling command {command}")
             await handler(command)
-            events_list = [event async for event in self.uow.collect_new_events()]
-            self.queue.extend(events_list)
+            commands_list = [
+                command async for command in self.uow.collect_new_events() if command
+            ]
+            self.queue.extend(commands_list)
         except Exception:
             logger.exception(
                 "Exception handling command {command} with handler {handler}"

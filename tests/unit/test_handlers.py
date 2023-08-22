@@ -181,27 +181,29 @@ class TestChangeBatchQuantity:
         # and 20 will be reallocated to the next batch
         assert batch2.available_quantity == 30
 
-    # async def test_reallocates_if_necessary_isolated(self):
-    #     messagebus = await bootstrap_test_app()
+    async def test_reallocates_if_necessary_isolated(self):
+        messagebus = Bootstrap(
+            uow=FakeUnitOfWorkWithFakeMessageBus(),
+            notifications=FakeNotifications(),
+            publish=lambda *args: None,
+        ).messagebus
 
-    #     # test setup as before
-    #     event_history = [
-    #         commands.CreateBatch("batch1", "INDIFFERENT-TABLE", 50, None),
-    #         commands.CreateBatch("batch2", "INDIFFERENT-TABLE", 50, date.today()),
-    #         commands.Allocate("order1", "INDIFFERENT-TABLE", 20),
-    #         commands.Allocate("order2", "INDIFFERENT-TABLE", 20),
-    #     ]
-    #     for e in event_history:
-    #         await messagebus.handle(e)
-    #     product = await messagebus.uow.products.get(sku="INDIFFERENT-TABLE")
-    #     [batch1, batch2] = product.batches
-    #     assert batch1.available_quantity == 10
-    #     assert batch2.available_quantity == 50
+        event_history = [
+            commands.CreateBatch("batch1", "INDIFFERENT-TABLE", 50, None),
+            commands.CreateBatch("batch2", "INDIFFERENT-TABLE", 50, date.today()),
+            commands.Allocate("order1", "INDIFFERENT-TABLE", 20),
+            commands.Allocate("order2", "INDIFFERENT-TABLE", 20),
+        ]
+        for e in event_history:
+            await messagebus.handle(e)
+        product = await messagebus.uow.products.get(sku="INDIFFERENT-TABLE")
+        [batch1, batch2] = product.batches
+        assert batch1.available_quantity == 10
+        assert batch2.available_quantity == 50
 
-    #     await messagebus.handle(commands.ChangeBatchQuantity("batch1", 25))
+        await messagebus.handle(commands.ChangeBatchQuantity("batch1", 25))
 
-    #     # assert on new events emitted rather than downstream side-effects
-    #     *_, reallocation_event = messagebus.uow.events_published
-    #     assert isinstance(reallocation_event, events.Deallocated)
-    #     assert reallocation_event.orderid in {"order1", "order2"}
-    #     assert reallocation_event.sku == "INDIFFERENT-TABLE"
+        *_, reallocation_event = messagebus.uow.events_published
+        assert isinstance(reallocation_event, events.Deallocated)
+        assert reallocation_event.orderid in {"order1", "order2"}
+        assert reallocation_event.sku == "INDIFFERENT-TABLE"
