@@ -55,7 +55,7 @@ class MessageBus(AbstractMessageBus):
                 ]
                 self.queue.extend(events_list)
             except Exception:
-                logger.exception("Exception handling event {event}")
+                logger.exception(f"Exception handling event {event}")
                 continue
 
     async def command_handler(self, command: commands.Command):
@@ -69,6 +69,6 @@ class MessageBus(AbstractMessageBus):
             self.queue.extend(commands_list)
         except Exception:
             logger.exception(
-                "Exception handling command {command} with handler {handler}"
+                f"Exception handling command {command} with handler {handler}"
             )
             raise
