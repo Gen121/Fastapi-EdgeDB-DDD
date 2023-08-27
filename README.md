@@ -32,6 +32,10 @@
 
 # Установка и Запуск:  
 _Представлены команды для системы Ubuntu_
+
+<details>
+  <summary>Ubuntu</summary>
+  
 ## Инициализация проекта
 1. Клонируйте проект:
 ```sh
@@ -50,12 +54,12 @@ _Представлены команды для системы Ubuntu_
 ```
 Эта команда копирует содержимое файла env.example в новый файл .env в корневой директории, по соседству c каталогом src
 
-<!--Если вы используете операционную систему Windows и командную строку cmd, то команда будет выглядеть так:
-
+<!--
+Если вы используете операционную систему Windows и командную строку cmd,
+то команда будет выглядеть так:
 batch
 Copy code
 copy .env.example .env -->
-
 
 4. Запустите команду Make:
 ```sh
@@ -63,8 +67,8 @@ copy .env.example .env -->
 ```
 В процессе запуска будет собрано несколько контейнеров Docker и после запуска выполнено тестирование
 <!-- TODO: В процессе запуска будет собран {Здесь расписать поднятие докер-контейнеров} -->
-## Запуск тестов
 
+## Запуск тестов
 ```sh
 make test
 # or, to run individual test types
@@ -77,6 +81,53 @@ pytest tests/unit
 pytest tests/integration
 pytest tests/e2e
 ```
+
+</details>
+
+
+<details>
+  <summary>Windows</summary>
+  
+## Инициализация проекта
+1. Клонируйте проект:
+```cmd
+   git clone https://github.com/Gen121/Fastapi-EdgeDB-DDD.git
+   cd Fastapi-EdgeDB-DDD
+```
+2. Установите зависимости:
+```cmd
+   python -m venv venv && source venv/bin/activate
+   pip install -r requirements.txt
+   pip install -e src/
+```
+3. Создайте файл .env:
+```cmd
+ cp env.example .env
+```
+Эта команда копирует содержимое файла env.example в новый файл .env в корневой директории, по соседству c каталогом src
+
+4. Запустите команду Make:
+```cmd
+    make all 
+```
+В процессе запуска будет собрано несколько контейнеров Docker и после запуска выполнено тестирование
+<!-- TODO: В процессе запуска будет собран {Здесь расписать поднятие докер-контейнеров} -->
+
+## Запуск тестов
+```cmd
+make test
+# or, to run individual test types
+make unit
+make integration
+make e2e
+# or, if you have a local virtualenv
+make up
+pytest tests/unit
+pytest tests/integration
+pytest tests/e2e
+```
+
+</details>
 
 
 ## Образец .env файла
