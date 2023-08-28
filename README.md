@@ -95,33 +95,36 @@ pytest tests/e2e
    cd Fastapi-EdgeDB-DDD
 ```
 2. Установите зависимости:
+Создание и активация виртуальной среды:
 ```cmd
-   python -m venv venv && source venv/bin/activate
-   pip install -r requirements.txt
-   pip install -e src/
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+pip install -e src\
 ```
 3. Создайте файл .env:
 ```cmd
- cp env.example .env
+copy env.example .env
+
 ```
 Эта команда копирует содержимое файла env.example в новый файл .env в корневой директории, по соседству c каталогом src
 
-4. Запустите команду Make:
+4. Запустите сценарий сборки и запуска контейнера:
 ```cmd
-    make all 
+    run_app.bat call :all 
 ```
-В процессе запуска будет собрано несколько контейнеров Docker и после запуска выполнено тестирование
-<!-- TODO: В процессе запуска будет собран {Здесь расписать поднятие докер-контейнеров} -->
+В процессе будет собрано несколько контейнеров Docker и после их запуска выполнено тестирование сервиса
 
 ## Запуск тестов
 ```cmd
-make test
+run_app.bat call :test
 # or, to run individual test types
-make unit
-make integration
-make e2e
+run_app.bat call :unit-tests
+run_app.bat call :integration-tests
+run_app.bat call:e2e-tests
+
 # or, if you have a local virtualenv
-make up
+run_app.bat call :up
 pytest tests/unit
 pytest tests/integration
 pytest tests/e2e
