@@ -88,7 +88,9 @@ class EdgeDBRepository(AbstractRepository):
             """SELECT Product { version_number } FILTER .sku=<str>$sku""", sku=product.sku
         )
         if product_db and product_db.version_number >= product.version_number:
-            raise SynchronousUpdateError()
+            raise SynchronousUpdateError(
+                "could not serialize access due to concurrent update"
+            )
         await self.add_product(product)
         self.seen.add(product)
         if hasattr(product, "batches"):

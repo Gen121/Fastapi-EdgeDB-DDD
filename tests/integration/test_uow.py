@@ -1,4 +1,7 @@
+import asyncio
 import datetime
+import traceback
+import edgedb
 
 import pytest
 
@@ -74,52 +77,51 @@ async def test_rolls_back_on_error(async_client_db, random_sku):
 
 # TODO: implement testing of Optimistic parallelism with version numbers
 
-# async def try_to_allocate(orderid, sku, exceptions, async_client_db):
-#     line = model.OrderLine(orderid=orderid, sku=sku, qty=10)
-#     uow = unit_of_work.EdgedbUnitOfWork(async_client_db)
-#     try:
-#         async with uow:
-#             product = await uow.products.get(sku=sku)
-#             if isinstance(product, model.Product):
-#                 product.allocate(line)
-#                 await uow.products.add(product)
-#             # await asyncio.sleep(0.2)  # Use asyncio.sleep instead of time.sleep
-#             await uow.commit()
-#     except Exception as e:
-#         print(traceback.format_exc())
-#         exceptions.append(e)
+async def try_to_allocate(orderid, sku, exceptions, async_client_db):
+    line = model.OrderLine(orderid=orderid, sku=sku, qty=10)
+    uow = unit_of_work.EdgedbUnitOfWork(async_client_db)
+    try:
+        async with uow:
+            product = await uow.products.get(sku=sku)
+            product.allocate(line)
+            await asyncio.sleep(0.2)
+            await uow.products.add(product)
+            await uow.commit()
+    except Exception as e:
+        print(traceback.format_exc())
+        exceptions.append(e)
 
 
-# async def test_concurrent_updates_to_version_are_not_allowed(
-#     random_sku, random_batchref, async_client_db, random_orderid
-# ) -> None:
-#     sku, batch = f"concurrent_updates_{random_sku()}", f"concurrent_updates_{random_batchref()}"
-#     await insert_batch(async_client_db, batch, sku, 100, datetime.date(2011, 1, 2), 1)
-#     order1, order2 = random_orderid(), random_orderid("_2")
-#     exceptions: list[Exception] = []
+async def test_concurrent_updates_to_version_are_not_allowed(
+    random_sku, random_batchref, async_client_db: edgedb.AsyncIOClient, random_orderid
+) -> None:
+    sku, batch = f"concurrent_updates_{random_sku()}", f"concurrent_updates_{random_batchref()}"
+    await insert_batch(async_client_db, batch, sku, 100, datetime.date(2011, 1, 2), 1)
+    order1, order2 = random_orderid(), random_orderid("_2")
+    exceptions: list[Exception] = []
 
-#     await asyncio.gather(
-#         try_to_allocate(order1, sku, exceptions, async_client_db),
-#         try_to_allocate(order2, sku, exceptions, async_client_db),
-#     )
+    await asyncio.gather(
+        try_to_allocate(order1, sku, exceptions, async_client_db),
+        try_to_allocate(order2, sku, exceptions, async_client_db),
+    )
 
-#     [product] = await async_client_db.query(
-#         "SELECT Product { version_number } FILTER .sku = <str>$sku",
-#         sku=sku,
-#     )
+    product = await async_client_db.query_single(
+        """SELECT Product { version_number } FILTER .sku = <str>$sku LIMIT 1""",
+        sku=sku,
+    )
 
-#     assert product.version_number == 2
+    assert product.version_number == 2
 
-#     [exception] = exceptions
-#     assert "не получилось сериализовать доступ из-за параллельного обновления" in str(
-#         exception)
+    [exception] = exceptions
+    assert "could not serialize access due to concurrent update" in str(
+        exception)
 
-#     orders = list(await async_client_db.query(
-#         """SELECT Batch { allocations } FILTER .sku = <str>$sku""",
-#         sku=sku,
-#     ))
-#     assert len(orders) == 1
+    orders = list(await async_client_db.query(
+        """SELECT Batch { allocations } FILTER .sku = <str>$sku""",
+        sku=sku,
+    ))
+    assert len(orders) == 1
 
-#     uow = unit_of_work.EdgedbUnitOfWork(async_client_db)
-#     with uow:
-#         await uow.async_client.execute("SELECT 1")
+    uow = unit_of_work.EdgedbUnitOfWork(async_client_db)
+    async with uow:
+        await uow.async_client.execute("SELECT 1")
