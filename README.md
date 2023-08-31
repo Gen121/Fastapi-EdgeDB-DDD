@@ -1,10 +1,170 @@
 <!-- v. 0.0.9 -->
 # FastAPI-EdgeDB-DDD v0.0.8
 
+## Description
+|<span style="font-weight:normal;">Description: FastAPI-EdgeDB-DDD is a project based on "Python Development Patterns: TDD, DDD, and Event-Driven Architecture" (by Persival Harry and Gregory Bob). The repository, thin view, context managers, and messagebus pattern allow for building an Event-driven architecture. The partition of the application into layers helps reduce the granularity of testing, as each layer can be easily covered with quick unit tests. The goal is not only to replicate the project from the textbook but also to test how such architecture allows for easy replacement of system components - frameworks and databases.</span>  | <img src="https://learning.oreilly.com/library/cover/9781492052197/250w/" alt="Альтернативный текст" style="max-width:300px;"> |
+|:---------------|----------------:|
+
+## Technology
+- FastAPI: A fast asynchronous web framework for Python.
+- EdgeDB: A database with expressive query syntax.
+- Redis Pub/Sub: Publisher-Subscribers mechanism in Redis.
+- Pytest: A powerful framework for writing and running tests.
+- Docker: Containerization for convenient deployment.
+
+## Advantages
+- Mastery of DDD and clean architecture patterns.
+- The architecture allowed for easy replacement of Flask with FastAPI and Postgres + SQLAlchemy with EdgeDB.
+- Ease of testing and integration due to the separation of the application into layers.
+- Template project structure suitable for creating your own projects.
+
+## Challenges:
+- Approaches from the textbook introduce a significant amount of boilerplate code, which might not be rational for small tasks.
+- Potential integration issues.
+- The need to learn message delivery systems (Kafka, RabbitMQ).
+
+## Growth:
+Enhancement of design skills.
+Application of patterns in other projects.
+Experience in integrating new libraries and applications.
+
+# Installation and Running:
+_Commands are provided for both Ubuntu and Windows systems_
+<details>
+  <summary>Ubuntu</summary>
+  
+## Project Initialization
+1. Clone the project:
+```sh
+   git clone https://github.com/Gen121/Fastapi-EdgeDB-DDD.git
+   cd Fastapi-EdgeDB-DDD
+```
+2. Install dependencies:
+```sh
+   python3 -m venv venv && source venv/bin/activate
+   pip install -r requirements.txt
+   pip install -e src/
+```
+3. Create a .env file:
+```sh
+ cp env.example .env
+```
+This command copies the contents of the env.example file into a new .env file in the root directory, next to the src directory.
+
+4. Run the Make command:
+```sh
+    make all 
+```
+During the execution, several Docker containers will be built, and after the launch, testing will be performed.
+
+## Run tests
+```sh
+make test
+# or, to run individual test types
+make unit
+make integration
+make e2e
+# or, if you have a local virtualenv
+make up
+pytest tests/unit
+pytest tests/integration
+pytest tests/e2e
+```
+
+</details>
+
+
+<details>
+  <summary>Windows</summary>
+
+## Project Initialization
+1. Clone the project:
+```cmd
+   git clone https://github.com/Gen121/Fastapi-EdgeDB-DDD.git
+   cd Fastapi-EdgeDB-DDD
+```
+2. Install dependencies:
+```cmd
+   python -m venv venv
+   venv\Scripts\activate
+   pip install -r requirements.txt
+   pip install -e src\
+```
+3. Create a .env file:
+```cmd
+   copy env.example .env
+
+```
+This command copies the contents of the env.example file into a new .env file in the root directory, next to the src directory.
+
+4. Run the .bat script to build and start the container:
+```cmd
+   run_app.bat call :all 
+```
+During the execution, several Docker containers will be built, and after the launch, testing will be performed.
+
+## Run tests
+```cmd
+   run_app.bat call :test
+
+# or, to run individual test types
+   run_app.bat call :unit-tests
+   run_app.bat call :integration-tests
+   run_app.bat call:e2e-tests
+
+# or, if you have a local virtualenv
+   run_app.bat call :up
+   pytest tests/unit
+   pytest tests/integration
+   pytest tests/e2e
+```
+
+</details>
+
+
+## Sample .env file
+```.env
+# .env.example
+
+# Disabling .pyc file creation and output buffering
+PYTHONDONTWRITEBYTECODE=1
+PYTHONUNBUFFERED=1
+
+APP_NAME="edgedb"
+NETWORK_NAME="local_dbs_network"
+
+# EdgeDB 
+DB_USER_NAME="edgedb"
+DB_NAME="edgedb"
+DB_TEST_NAME="edgedb"
+DB_ROOT_PASSWORD="edgedb"
+DB_HOSTNAME="edgedb"
+DB_PORT=5656
+
+## Volume names for database data and schemas
+DB_VOLUME_DATA_NAME="${DB_CONTAINER_NAME}_data"
+DB_VOLUME_SCHEMA_NAME="${DB_CONTAINER_NAME}_schema"
+
+DB_CONTAINER_NAME="${APP_NAME}"
+
+# API-server
+API_HOST="localhost"
+API_PORT=5005
+
+# Redis
+REDIS_HOST="redis"
+REDIS_PORT=6379
+
+# Email sending host
+EMAIL_HOST="mailhog"
+```
+
+<details>
+  <summary>[на русском]</summary>
+
 ## Описание
 |<span style="font-weight:normal;">Описание: FastAPI-EdgeDB-DDD - Проект на основе "Паттерны разработки на Python: TDD, DDD и событийно-ориентированная архитектура" (Персиваль Гарри и Грегори Боб).Паттерны репозитория, тонких вью, менеджеров контекста и сообщений, позволяют выстроить событийно-управляемую модель. Разделение приложения на слои, позволяет уменьшить гранулярность тестирования, т.к. каждый слой легко покрыть быстрыми юниттестами. Цель не просто воспроизвести проект из учебника, а протестировать насколько такая архитектура позволяет  легко заменять компоненты системы - фреймворк и базу данных.</span>  | <img src="https://static.insales-cdn.com/images/products/1/5229/453669997/44611468.jpg" alt="Альтернативный текст" style="max-width:300px;"> |
 |:---------------|----------------:|
-
 
 
 ## Технологии
@@ -31,7 +191,7 @@
 Опыт интеграции новых библиотек и приложений.
 
 # Установка и Запуск:  
-_Представлены команды для системы Ubuntu_
+_Представлены команды для ос Ubuntu и Windows_
 
 <details>
   <summary>Ubuntu</summary>
@@ -50,36 +210,31 @@ _Представлены команды для системы Ubuntu_
 ```
 3. Создайте файл .env:
 ```sh
- cp env.example .env
+   cp env.example .env
 ```
 Эта команда копирует содержимое файла env.example в новый файл .env в корневой директории, по соседству c каталогом src
 
-<!--
-Если вы используете операционную систему Windows и командную строку cmd,
-то команда будет выглядеть так:
-batch
-Copy code
-copy .env.example .env -->
 
 4. Запустите команду Make:
 ```sh
-    make all 
+   make all 
 ```
 В процессе запуска будет собрано несколько контейнеров Docker и после запуска выполнено тестирование
-<!-- TODO: В процессе запуска будет собран {Здесь расписать поднятие докер-контейнеров} -->
 
 ## Запуск тестов
 ```sh
-make test
-# or, to run individual test types
-make unit
-make integration
-make e2e
-# or, if you have a local virtualenv
-make up
-pytest tests/unit
-pytest tests/integration
-pytest tests/e2e
+   make test
+
+   # or, to run individual test types
+   make unit
+   make integration
+   make e2e
+
+   # or, if you have a local virtualenv
+   make up
+   pytest tests/unit
+   pytest tests/integration
+   pytest tests/e2e
 ```
 
 </details>
@@ -87,47 +242,52 @@ pytest tests/e2e
 
 <details>
   <summary>Windows</summary>
-  
+
 ## Инициализация проекта
+
 1. Клонируйте проект:
 ```cmd
    git clone https://github.com/Gen121/Fastapi-EdgeDB-DDD.git
    cd Fastapi-EdgeDB-DDD
 ```
+
 2. Установите зависимости:
 Создание и активация виртуальной среды:
 ```cmd
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-pip install -e src\
+   python -m venv venv
+   venv\Scripts\activate
+   pip install -r requirements.txt
+   pip install -e src\
 ```
+
 3. Создайте файл .env:
 ```cmd
-copy env.example .env
-
+   copy env.example .env
 ```
-Эта команда копирует содержимое файла env.example в новый файл .env в корневой директории, по соседству c каталогом src
+Эта команда копирует содержимое файла env.example в новый файл .env
+ в корневой директории, по соседству c каталогом src
 
 4. Запустите сценарий сборки и запуска контейнера:
 ```cmd
-    run_app.bat call :all 
+   run_app.bat call :all 
 ```
-В процессе будет собрано несколько контейнеров Docker и после их запуска выполнено тестирование сервиса
+В процессе будет собрано несколько контейнеров Docker,
+ после их запуска выполнено тестирование сервиса
 
 ## Запуск тестов
 ```cmd
-run_app.bat call :test
-# or, to run individual test types
-run_app.bat call :unit-tests
-run_app.bat call :integration-tests
-run_app.bat call:e2e-tests
+   run_app.bat call :test
 
-# or, if you have a local virtualenv
-run_app.bat call :up
-pytest tests/unit
-pytest tests/integration
-pytest tests/e2e
+   # или для запуска отдельных типов тестов
+   run_app.bat call :unit-tests
+   run_app.bat call :integration-tests
+   run_app.bat call:e2e-tests
+
+   # или, если у вас есть virtualenv
+   run_app.bat call :up
+   pytest tests/unit
+   pytest tests/integration
+   pytest tests/e2e
 ```
 
 </details>
@@ -169,3 +329,4 @@ REDIS_PORT=6379
 # Хост отправки электронной почты
 EMAIL_HOST="mailhog"
 ```
+</details>
