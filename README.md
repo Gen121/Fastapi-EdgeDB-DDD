@@ -2,7 +2,8 @@
 # FastAPI-EdgeDB-DDD v0.0.8
 
 ## Description
-|<span style="font-weight:normal;">Description: FastAPI-EdgeDB-DDD is a project based on "Python Development Patterns: TDD, DDD, and Event-Driven Architecture" (by Persival Harry and Gregory Bob). The repository, thin view, context managers, and messagebus pattern allow for building an Event-driven architecture. The partition of the application into layers helps reduce the granularity of testing, as each layer can be easily covered with quick unit tests. The goal is not only to replicate the project from the textbook but also to test how such architecture allows for easy replacement of system components - frameworks and databases.</span>  | <img src="https://learning.oreilly.com/library/cover/9781492052197/250w/" alt="Альтернативный текст" style="max-width:300px;"> |
+
+|<span style="font-weight:normal;">Description: FastAPI-EdgeDB-DDD is a project based on "Architecture Patterns with Python: Enabling Test-Driven Development, Domain-Driven Design, and Event-Driven Microservices" (by Persival Harry and Gregory Bob). The repository, thin view, context managers, and messagebus pattern allow for building an Event-driven architecture. The partition of the application into layers helps reduce the granularity of testing, as each layer can be easily covered with quick unit tests. The goal is not only to replicate the project from the textbook but also to test how such architecture allows for easy replacement of system components - frameworks and databases.</span>  | <img src="https://m.media-amazon.com/images/P/1492052205.01._SCLZZZZZZZ_SX500_.jpg" alt="Альтернативный текст" style="max-width:300px;"> |
 |:---------------|----------------:|
 
 ## Technology
