@@ -6,15 +6,58 @@
 |<span style="font-weight:normal;">Description: FastAPI-EdgeDB-DDD is a project based on "Architecture Patterns with Python: Enabling Test-Driven Development, Domain-Driven Design, and Event-Driven Microservices" (by Persival Harry and Gregory Bob). The repository, thin view, context managers, and messagebus pattern allow for building an Event-driven architecture. The partition of the application into layers helps reduce the granularity of testing, as each layer can be easily covered with quick unit tests. The goal is not only to replicate the project from the textbook but also to test how such architecture allows for easy replacement of system components - frameworks and databases.</span>  | <img src="https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcTyDEHpipE4vZO8w16A770h6nk33TeTcu57MB_zW4QXPAtOhx-d" alt="Альтернативный текст" style="max-width:300px;"> |
 |:---------------|----------------:|
 
-## Help Needed
 
-|I've encountered an issue with testing parallel transactions that I can't resolve on my own. The original testing code uses the threading module: Original Test Code [tests/integration/test_uow.py - original](https://github.com/cosmicpython/code/blob/734df09afc65ba43c851271def147c70ac3c3b98/tests/integration/test_uow.py#L94C8-L94C8) As I use an asynchronous framework, I've modified it: Asynchronous Test Code [tests/integration/test_uow.py - asynchrony](https://github.com/Gen121/Fastapi-EdgeDB-DDD/blob/073ee2dc5d7189ee638881648a22a6a81e7119af/tests/integration/test_uow.py#L95) During testing, I encounter the exception ```edgedb.errors.TransactionSerializationError: could not serialize access due to concurrent update``` Tests are only stopped by a keyboard interrupt (KeyboardInterrupt). I suspect my problem stems from the fact that I'm just starting to learn what asynchronous code is. Maybe I'm not opening and closing the asynchronous transaction context manager correctly:: Async Unit of Work context manager [src/allocation/services/unit_of_work.py](https://github.com/Gen121/Fastapi-EdgeDB-DDD/blob/Change_DB_for_EdgeDB/src/allocation/services/unit_of_work.py) If anyone could assist, I'd be grateful. Feel free to reach out via comments, [Telegram](https://t.me/CheEugene), or [Twitter](https://twitter.com/chelnok1190).|
-|:-------------------------------:|
+<details>
+  <summary>Full project diagram</summary>
 
+<pre>
+  ┌─────────────────────────┐       ┌──────────────────────────────┐  
+┌─► <a href="https://github.com/redis/redis">External Message Broker</a> │       │             <a href="">WEB</a>              ◄───┐
+│ └─────┬───────────────────┘       └───────────────────────────┬──┘   │  
+│       │                                                       │      │  
+│ ┌─────▼─────────┐                        ────              ┌──▼──┐   │  
+│ │ <a href="src/allocation/adapters/redis_eventpublisher.py">Eventconsumer</a> ├──────────────────────►/    \◄────────────┤ <a href="src/allocation/app/main.py">API</a> │   │  
+│ └─────┬─────────┘                      /      \            └───┬─┘   │
+│       │                               /        \               │     │
+│       │                              / <a href="src/allocation/bootstrap.py">Bootstrap</a>\              │     │
+│       │                              \          /              │     │
+│       │                               \        /               │     │
+│       │       ┌─────────────────────────      /                │     │
+│       │       │                         \────/                 │     │
+│       │       │                                                │     │
+│       │       │       ┌────────────────────────────────────────┘     │
+│       │       │       │                                              │
+│    ---│-------│-------│-------------------------------------------   │
+│    -  │       │       │                                          -   │
+│    -  │       │       │      ┌────────────┐                      -   │
+│    -  │       │       │      │ ---------- │                      -   │
+│    - ┌▼───────▼───────▼┐     ├────────────┤     ┌──────────────┐ -   │
+│    - │    <a href="src/allocation/services/messagebus.py">Messagebus</a>   ├────►│  <a href="src/allocation/services/handlers.py">Handlers</a>  ├────►│ <a href="src/allocation/services/unit_of_work.py">unit_of_work</a> │ -   │
+│    - └─────────────────┘     ├────────────┤     └───────┬──────┘ -   │
+│    -                         │ ---------- │             │        -   │
+│    -                         └────────────┘             │        -   │
+│    -  <a href="src/allocation/services">Services</a>                                          │        -   │
+│    -----------------------------------------------------│---------   │
+│                                                         │            │
+│                                    ┌────────────────────┘            │
+│                                    │                                 │
+│    --------------------------------│------------------------------   │
+│    -                               │                             -   │
+│    - ┌────────────────┐   ┌────────▼────────┐  ┌───────────────┐ -   │
+└──────┤ <a href="src/allocation/adapters/redis_eventpublisher.py">Eventpublisher</a> │   │   <a href="src/allocation/repositories/repository.py">Repositories</a>  │  │  <a href="src/allocation/adapters/notifications.py">Notifications</a>├─────┘
+     - └────────────────┘   └─────┬───────┬───┘  └───────────────┘ -
+     -                            │       │                        -
+     -  <a href="src/allocation/adapters">Adaptorstions</a>             │       │                        -
+     -----------------------------│-------│-------------------------
+                                  │       │
+         ┌─────────────┐          │       │        ┌─────────────┐
+         │             │          │       │        │             │
+         │ <a href="src/allocation/domain/model.py">Domain area</a> ◄──────────┘       └────────►    <a href="https://github.com/edgedb/edgedb">EdgeDB</a>   │
+         │             │                           │             │
+         └─────────────┘                           └─────────────┘
+</pre>
 
-
-
-
+</details>
 
 
 ## Technology
@@ -35,6 +78,10 @@
 - Potential integration issues.
 - The need to learn message delivery systems (Kafka, RabbitMQ).
 
+## Help Needed
+
+|I've encountered an issue with testing parallel transactions that I can't resolve on my own. The original testing code uses the threading module: Original Test Code [tests/integration/test_uow.py - original](https://github.com/cosmicpython/code/blob/734df09afc65ba43c851271def147c70ac3c3b98/tests/integration/test_uow.py#L94C8-L94C8) As I use an asynchronous framework, I've modified it: Asynchronous Test Code [tests/integration/test_uow.py - asynchrony](https://github.com/Gen121/Fastapi-EdgeDB-DDD/blob/073ee2dc5d7189ee638881648a22a6a81e7119af/tests/integration/test_uow.py#L95) During testing, I encounter the exception ```edgedb.errors.TransactionSerializationError: could not serialize access due to concurrent update``` Tests are only stopped by a keyboard interrupt (KeyboardInterrupt). I suspect my problem stems from the fact that I'm just starting to learn what asynchronous code is. Maybe I'm not opening and closing the asynchronous transaction context manager correctly:: Async Unit of Work context manager [src/allocation/services/unit_of_work.py](https://github.com/Gen121/Fastapi-EdgeDB-DDD/blob/Change_DB_for_EdgeDB/src/allocation/services/unit_of_work.py) If anyone could assist, I'd be grateful. Feel free to reach out via comments, [Telegram](https://t.me/CheEugene), or [Twitter](https://twitter.com/chelnok1190).|
+|:-------------------------------:|
 ## Growth:
 Enhancement of design skills.
 Application of patterns in other projects.
