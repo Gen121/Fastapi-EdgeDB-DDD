@@ -8,7 +8,7 @@
 
 
 <details>
-  <summary>Full project diagram</summary>
+  <summary> 🧬 Full Project Diagram </summary>
 
 <pre>
   ┌─────────────────────────┐       ┌──────────────────────────────┐  
