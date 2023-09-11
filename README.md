@@ -11,7 +11,7 @@
 
 <pre>
   ┌─────────────────────────┐       ┌──────────────────────────────┐  
-┌─► <a href="https://github.com/redis/redis">External Message Broker</a> │       │             <a href="">WEB</a>              ◄───┐
+┌─► <a href="https://github.com/redis/redis">External Message Broker</a> │       │             WEB              ◄───┐
 │ └─────┬───────────────────┘       └───────────────────────────┬──┘   │  
 │       │                                                       │      │  
 │ ┌─────▼─────────┐                        ────              ┌──▼──┐   │  
