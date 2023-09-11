@@ -7,8 +7,7 @@
 |:---------------|----------------:|
 
 
-<details>
-  <summary> 🧬 Full Project Diagram </summary>
+### 🧬 Full Project Diagram
 
 <pre>
   ┌─────────────────────────┐       ┌──────────────────────────────┐  
